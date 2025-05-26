@@ -9,6 +9,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  ActivityIndicator,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import {
@@ -24,6 +27,10 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { MOCK_VEHICLES } from '@/assets/MOCKDATA';
+import { useAddMaintenance } from '@/database/useAddMentenance';
+import { useUserVehicles } from '@/database/useFetchAllCarsById';
+import { Vehicle } from '@/types';
+import { useStoredUser } from '@/hooks/useStoredData';
 
 export default function AddMaintenanceScreen() {
   const router = useRouter();
@@ -35,28 +42,36 @@ export default function AddMaintenanceScreen() {
   const [mileage, setMileage] = useState('');
   const [cost, setCost] = useState('');
   const [location, setLocation] = useState('');
-  const [receipt, setReceipt] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isVehicleModalVisible, setIsVehicleModalVisible] = useState(false);
+  const { user } = useStoredUser();
+  const { addMaintenanceRecord, loading, error } = useAddMaintenance();
+  const { vehicles, loading: vehiclesLoading } = useUserVehicles();
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title || !selectedVehicle || !date || !mileage || !cost) {
-      setError('Please fill in all required fields');
+      setFormError('Please fill in all required fields');
       return;
     }
 
-    // Here you would typically make an API call to save the maintenance record
-    console.log('Saving maintenance record:', {
+    const record = {
+      vehicleId: selectedVehicle,
+      userid: user?.uuid,
       title,
       description,
-      vehicleId: selectedVehicle,
-      date,
+      date: date.toISOString(),
       mileage: parseInt(mileage, 10),
       cost: parseFloat(cost),
       location,
-      receipt,
-    });
+      isScheduled: false,
+      isDone: false,
+    };
 
-    router.back();
+    const result = await addMaintenanceRecord(record);
+
+    if (result) {
+      router.back();
+    }
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
@@ -66,26 +81,22 @@ export default function AddMaintenanceScreen() {
     }
   };
 
-  const handleAddReceipt = async () => {
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (permissionResult.granted === false) {
-      alert('Permission to access camera roll is required!');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      setReceipt(result.assets[0].uri);
-    }
+  const handleSelectVehicle = (vehicleId: string) => {
+    setSelectedVehicle(vehicleId);
+    setIsVehicleModalVisible(false);
   };
+
+  const renderVehicleItem = ({ item }: { item: Vehicle }) => (
+    <TouchableOpacity
+      style={styles.vehicleItem}
+      onPress={() => handleSelectVehicle(item.id)}
+    >
+      <Text style={styles.vehicleItemText}>
+        {item.year} {item.make} {item.model}
+      </Text>
+      {selectedVehicle === item.id && <View style={styles.selectedIndicator} />}
+    </TouchableOpacity>
+  );
 
   return (
     <>
@@ -103,14 +114,15 @@ export default function AddMaintenanceScreen() {
           ),
         }}
       />
+
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView style={styles.scrollView}>
-          {error && (
+          {(formError || error) && (
             <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={styles.errorText}>{formError || error}</Text>
             </View>
           )}
 
@@ -143,16 +155,13 @@ export default function AddMaintenanceScreen() {
               <Text style={styles.label}>Vehicle *</Text>
               <TouchableOpacity
                 style={styles.selectButton}
-                onPress={() => {
-                  /* Show vehicle selector */
-                }}
+                onPress={() => setIsVehicleModalVisible(true)}
               >
                 <Text style={styles.selectButtonText}>
-                  {selectedVehicle
-                    ? MOCK_VEHICLES.find((v) => v.id === selectedVehicle)
-                        ?.make +
-                      ' ' +
-                      MOCK_VEHICLES.find((v) => v.id === selectedVehicle)?.model
+                  {selectedVehicle && vehicles
+                    ? `${vehicles.find((v) => v.id === selectedVehicle)?.year} 
+                       ${vehicles.find((v) => v.id === selectedVehicle)?.make} 
+                       ${vehicles.find((v) => v.id === selectedVehicle)?.model}`
                     : 'Select a vehicle'}
                 </Text>
                 <ChevronDown size={20} color="#6B7280" />
@@ -184,12 +193,12 @@ export default function AddMaintenanceScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Mileage *</Text>
+              <Text style={styles.label}>Kilometrage *</Text>
               <TextInput
                 style={styles.input}
                 value={mileage}
                 onChangeText={setMileage}
-                placeholder="e.g., 50000"
+                placeholder="e.g., 50000klm"
                 keyboardType="numeric"
               />
             </View>
@@ -200,7 +209,7 @@ export default function AddMaintenanceScreen() {
                 style={styles.input}
                 value={cost}
                 onChangeText={setCost}
-                placeholder="e.g., 49.99"
+                placeholder="e.g., 500dzd"
                 keyboardType="decimal-pad"
               />
             </View>
@@ -216,38 +225,50 @@ export default function AddMaintenanceScreen() {
             </View>
           </View>
 
-          <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Receipt</Text>
-
-            {receipt ? (
-              <View style={styles.receiptContainer}>
-                <Image
-                  source={{ uri: receipt }}
-                  style={styles.receiptImage}
-                  resizeMode="cover"
-                />
-                <TouchableOpacity
-                  style={styles.changeReceiptButton}
-                  onPress={handleAddReceipt}
-                >
-                  <Text style={styles.changeReceiptText}>Change Receipt</Text>
-                </TouchableOpacity>
-              </View>
+          <TouchableOpacity
+            style={styles.submitButton}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <TouchableOpacity
-                style={styles.uploadButton}
-                onPress={handleAddReceipt}
-              >
-                <Upload size={24} color="#3B6FE0" />
-                <Text style={styles.uploadButtonText}>Upload Receipt</Text>
-              </TouchableOpacity>
+              <Text style={styles.submitButtonText}>Save Record</Text>
             )}
-          </View>
-
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-            <Text style={styles.submitButtonText}>Save Record</Text>
           </TouchableOpacity>
         </ScrollView>
+
+        {/* Vehicle Selection Modal */}
+        <Modal
+          visible={isVehicleModalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setIsVehicleModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Vehicle</Text>
+                <TouchableOpacity
+                  onPress={() => setIsVehicleModalVisible(false)}
+                >
+                  <Text style={styles.modalCloseText}>Close</Text>
+                </TouchableOpacity>
+              </View>
+
+              {vehiclesLoading ? (
+                <ActivityIndicator size="large" color="#3B6FE0" />
+              ) : (
+                <FlatList
+                  data={vehicles}
+                  renderItem={renderVehicleItem}
+                  keyExtractor={(item) => item.id}
+                  contentContainerStyle={styles.vehicleList}
+                />
+              )}
+            </View>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </>
   );
@@ -396,5 +417,54 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
     fontSize: 16,
     color: '#FFFFFF',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: '70%',
+    padding: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  modalCloseText: {
+    fontSize: 16,
+    color: '#3B6FE0',
+  },
+  vehicleList: {
+    paddingBottom: 16,
+  },
+  vehicleItem: {
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  vehicleItemText: {
+    fontSize: 16,
+    color: '#1F2937',
+  },
+  selectedIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#3B6FE0',
   },
 });

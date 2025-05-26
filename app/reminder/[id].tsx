@@ -1,25 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import { useReminder } from '@/database/useReminder';
+import { supabase } from '@/lib/supabase';
+import { Reminder, Vehicle } from '@/types';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Platform,
-} from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import {
+  AlertTriangle,
   ArrowLeft,
+  Bell,
   Calendar,
   Car,
-  Bell,
-  Edit2,
-  Trash2,
-  AlertTriangle,
   Clock,
+  Trash2,
 } from 'lucide-react-native';
-import { Reminder, Vehicle } from '@/types';
-import { MOCK_REMINDERS, MOCK_VEHICLES } from '@/assets/MOCKDATA';
+import React, { useEffect, useState } from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 export default function ReminderDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -27,42 +26,68 @@ export default function ReminderDetailScreen() {
   const [reminder, setReminder] = useState<Reminder | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const { deleteReminder, fetchReminder, fetchVehicle, isLoading, error } =
+    useReminder();
 
   useEffect(() => {
-    // Find reminder by id
-    const foundReminder = MOCK_REMINDERS.find((r) => r.id === id);
-    if (foundReminder) {
-      setReminder(foundReminder);
-      // Find associated vehicle
-      const foundVehicle = MOCK_VEHICLES.find(
-        (v) => v.id === foundReminder.vehicleId
-      );
-      if (foundVehicle) {
-        setVehicle(foundVehicle);
+    const loadData = async () => {
+      const reminderData = await fetchReminder(id as string);
+      if (reminderData) {
+        setReminder(reminderData);
+        const vehicleData = await fetchVehicle(reminderData.vehicleId);
+        if (vehicleData) {
+          setVehicle(vehicleData);
+        }
       }
-    }
+    };
+
+    loadData();
   }, [id]);
 
-  const handleDelete = () => {
-    // Here you would typically make an API call to delete the reminder
-    console.log('Deleting reminder:', id);
-    router.back();
-  };
-
-  const handleEdit = () => {
-    router.push(`/reminder/edit/${id}`);
-  };
-
-  const handleComplete = () => {
-    if (reminder) {
-      setReminder({ ...reminder, isComplete: !reminder.isComplete });
+  const handleDelete = async () => {
+    const success = await deleteReminder(id as string);
+    if (success) {
+      router.back();
     }
   };
+
+  const handleComplete = async () => {
+    if (!reminder) return;
+
+    try {
+      const { error } = await supabase
+        .from('reminders')
+        .update({ isComplete: !reminder.isComplete })
+        .eq('id', reminder.id);
+
+      if (!error) {
+        setReminder({ ...reminder, isComplete: !reminder.isComplete });
+      }
+    } catch (err) {
+      console.error('Failed to update reminder:', err);
+    }
+  };
+
+  if (isLoading && (!reminder || !vehicle)) {
+    return (
+      <View style={styles.container}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text>Error: {error}</Text>
+      </View>
+    );
+  }
 
   if (!reminder || !vehicle) {
     return (
       <View style={styles.container}>
-        <Text>Loading...</Text>
+        <Text>Reminder not found</Text>
       </View>
     );
   }
@@ -103,12 +128,6 @@ export default function ReminderDetailScreen() {
           ),
           headerRight: () => (
             <View style={styles.headerButtons}>
-              <TouchableOpacity
-                onPress={handleEdit}
-                style={styles.headerButton}
-              >
-                <Edit2 size={24} color="#3B6FE0" />
-              </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setShowDeleteConfirm(true)}
                 style={styles.headerButton}
@@ -159,9 +178,9 @@ export default function ReminderDetailScreen() {
                 <View style={styles.detailItem}>
                   <Car size={20} color="#6B7280" />
                   <View style={styles.detailText}>
-                    <Text style={styles.detailLabel}>Due Mileage</Text>
+                    <Text style={styles.detailLabel}>Due Kilometrage</Text>
                     <Text style={styles.detailValue}>
-                      {reminder.dueMileage.toLocaleString()} mi
+                      {reminder.dueMileage.toLocaleString()} klms
                     </Text>
                   </View>
                 </View>
@@ -182,7 +201,7 @@ export default function ReminderDetailScreen() {
                 {reminder.recurringMileage && (
                   <Text style={styles.recurringText}>
                     Repeats every {reminder.recurringMileage.toLocaleString()}{' '}
-                    miles
+                    klms
                   </Text>
                 )}
               </View>
@@ -196,22 +215,26 @@ export default function ReminderDetailScreen() {
             </View>
           )}
 
-          <TouchableOpacity
-            style={[
-              styles.completeButton,
-              reminder.isComplete && styles.uncompleteButton,
-            ]}
-            onPress={handleComplete}
-          >
-            <Text
+          <View style={styles.buttonGroup}>
+            <TouchableOpacity
               style={[
-                styles.completeButtonText,
-                reminder.isComplete && styles.uncompleteButtonText,
+                styles.completeButton,
+                reminder.isComplete && styles.uncompleteButton,
               ]}
+              onPress={handleComplete}
             >
-              {reminder.isComplete ? 'Mark as Incomplete' : 'Mark as Complete'}
-            </Text>
-          </TouchableOpacity>
+              <Text
+                style={[
+                  styles.completeButtonText,
+                  reminder.isComplete && styles.uncompleteButtonText,
+                ]}
+              >
+                {reminder.isComplete
+                  ? 'Mark as Incomplete'
+                  : 'Mark as Complete'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
 
@@ -226,6 +249,7 @@ export default function ReminderDetailScreen() {
               This action cannot be undone. Are you sure you want to delete this
               reminder?
             </Text>
+            {error && <Text style={styles.errorText}>{error}</Text>}
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.cancelButton}
@@ -236,8 +260,11 @@ export default function ReminderDetailScreen() {
               <TouchableOpacity
                 style={styles.deleteButton}
                 onPress={handleDelete}
+                disabled={isLoading}
               >
-                <Text style={styles.deleteButtonText}>Delete</Text>
+                <Text style={styles.deleteButtonText}>
+                  {isLoading ? 'Deleting...' : 'Delete'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -255,12 +282,47 @@ const styles = StyleSheet.create({
   headerButton: {
     padding: 8,
   },
+  errorText: {
+    color: '#EF4444', // red-500
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 16,
+    marginHorizontal: 16,
+  },
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   content: {
     padding: 16,
+  },
+  buttonGroup: {
+    flexDirection: 'column',
+    gap: 12,
+    marginTop: 24,
+  },
+
+  editButton: {
+    backgroundColor: '#3B82F6',
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+
+  editButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   header: {
     backgroundColor: '#FFFFFF',
@@ -321,7 +383,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   detailRow: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     justifyContent: 'space-between',
   },
   detailItem: {

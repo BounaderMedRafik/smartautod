@@ -1,0 +1,3 @@
+- create delete button for whole car,
+- create the languages things
+- and make better data for client

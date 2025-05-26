@@ -1,48 +1,164 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  Platform,
-  RefreshControl,
-} from 'react-native';
+import { useFetchCarById } from '@/database/useFetchCarById';
+import { useVehicleReminders } from '@/database/useVehicleReminders';
+import { useStoredUser } from '@/hooks/useStoredData';
+import { getDateDifferenceText } from '@/lib/dateUtils';
+import { supabase } from '@/lib/supabase';
+import { Vehicle, VehicleCardProps } from '@/types';
 import { useRouter } from 'expo-router';
 import {
-  PlusCircle,
+  Calendar,
+  Car,
   CarFront,
   Fuel,
-  Calendar,
-  Wrench,
   Info,
+  PlusCircle,
 } from 'lucide-react-native';
-import { Vehicle } from '@/types';
-import { LinearGradient } from 'expo-linear-gradient';
-import { MOCK_VEHICLES } from '@/assets/MOCKDATA';
-import { useStoredUser } from '@/hooks/useStoredData';
+import React, { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+function useUserVehicles() {
+  const { user } = useStoredUser();
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchVehicles = useCallback(async () => {
+    try {
+      setLoading(true);
+      if (!user?.uuid) return;
+
+      const { data, error: supabaseError } = await supabase
+        .from('cars')
+        .select('*')
+        .eq('userId', user.uuid);
+
+      if (supabaseError) throw supabaseError;
+      setVehicles(data || []);
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.uuid]);
+
+  // Initial fetch
+  React.useEffect(() => {
+    fetchVehicles();
+  }, [fetchVehicles]);
+
+  return {
+    vehicles,
+    loading,
+    error,
+    refetchVehicles: fetchVehicles,
+  };
+}
+
+const VehicleCard = ({ vehicle, userId, onPress }: VehicleCardProps) => {
+  const { nearestReminder, loading: reminderLoading } = useVehicleReminders(
+    vehicle.id,
+    userId
+  );
+
+  const { maintenance, finances, reminders, loading, error, refetch } =
+    useFetchCarById(vehicle.id as string);
+
+  const getLatestMileage = () => {
+    // Get all maintenance mileages
+    const maintenanceMileages = maintenance.map((m) => m.mileage);
+
+    // Get all finance mileages (assuming finances have mileage field)
+    //@ts-ignore
+    const financeMileages = finances.map((f) => f.mileage || 0);
+
+    // Combine all mileages with current vehicle mileage
+    const allMileages = [
+      ...maintenanceMileages,
+      ...financeMileages,
+      vehicle?.mileage,
+    ];
+
+    // Return the highest mileage
+    return Math.max(...allMileages);
+  };
+
+  return (
+    <TouchableOpacity style={styles.vehicleCard} onPress={onPress}>
+      <View style={styles.vehicleImageContainer}>
+        {vehicle.imageUrl ? (
+          <Image
+            source={{ uri: vehicle.imageUrl }}
+            style={styles.vehicleImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.noImagePlaceholder}>
+            <Car size={40} color="#9CA3AF" />
+          </View>
+        )}
+        <View style={styles.vehicleInfo}>
+          <Text style={styles.vehicleName}>
+            {vehicle.year} {vehicle.make} {vehicle.model}
+          </Text>
+          <Text style={styles.vehiclePlate}>{vehicle.licensePlate}</Text>
+        </View>
+      </View>
+
+      <View style={styles.vehicleStats}>
+        <View style={styles.statItem}>
+          <Fuel size={18} color="#6B7280" />
+          <Text style={styles.statLabel}>Kilometrage</Text>
+          <Text style={styles.statValue}>
+            {getLatestMileage().toLocaleString()} klms{' '}
+          </Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.statItem}>
+          <Calendar size={18} color="#6B7280" />
+          <Text style={styles.statLabel}>Next Service</Text>
+          <Text style={styles.statValue}>
+            {reminderLoading ? (
+              <ActivityIndicator size="small" color="#6B7280" />
+            ) : nearestReminder ? (
+              new Date(nearestReminder.dueDate).toLocaleDateString()
+            ) : (
+              'No upcoming reminders'
+            )}
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 export default function DashboardScreen() {
   const { user } = useStoredUser();
-  const [vehicles, setVehicles] = useState<Vehicle[]>(MOCK_VEHICLES);
+  const {
+    vehicles: fetchedVehicles,
+    loading,
+    refetchVehicles,
+  } = useUserVehicles();
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    // Simulate a refresh
-    setTimeout(() => {
+    refetchVehicles().finally(() => {
       setRefreshing(false);
-    }, 1000);
-  }, []);
+    });
+  }, [refetchVehicles]);
 
   const handleAddVehicle = () => {
     router.push('/vehicle/add');
-  };
-
-  const handleVehiclePress = (vehicleId: string) => {
-    router.push(`/vehicle/${vehicleId}`);
   };
 
   return (
@@ -50,10 +166,19 @@ export default function DashboardScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#3B6FE0"
+          />
         }
       >
-        {vehicles.length === 0 ? (
+        {loading && !refreshing ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#3B6FE0" />
+            <Text style={styles.loadingText}>Loading your vehicles...</Text>
+          </View>
+        ) : fetchedVehicles.length === 0 ? (
           <View style={styles.emptyState}>
             <CarFront size={60} color="#9CA3AF" />
             <Text style={styles.emptyStateTitle}>No Vehicles Yet</Text>
@@ -81,55 +206,17 @@ export default function DashboardScreen() {
             </View>
 
             <View style={styles.vehicleCards}>
-              {vehicles.map((vehicle) => (
-                <TouchableOpacity
-                  key={vehicle.id}
-                  style={styles.vehicleCard}
-                  onPress={() => handleVehiclePress(vehicle.id)}
-                >
-                  <View style={styles.vehicleImageContainer}>
-                    <Image
-                      source={{ uri: vehicle.imageUrl }}
-                      style={styles.vehicleImage}
-                      resizeMode="cover"
-                    />
-                    <LinearGradient
-                      colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.7)']}
-                      style={styles.gradientOverlay}
-                    />
-                    <View style={styles.vehicleInfo}>
-                      <Text style={styles.vehicleName}>
-                        {vehicle.year} {vehicle.make} {vehicle.model}
-                      </Text>
-                      <Text style={styles.vehiclePlate}>
-                        {vehicle.licensePlate}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.vehicleStats}>
-                    <View style={styles.statItem}>
-                      <Fuel size={18} color="#6B7280" />
-                      <Text style={styles.statLabel}>Mileage</Text>
-                      <Text style={styles.statValue}>
-                        {vehicle.mileage.toLocaleString()} mi
-                      </Text>
-                    </View>
-                    <View style={styles.divider} />
-                    <View style={styles.statItem}>
-                      <Calendar size={18} color="#6B7280" />
-                      <Text style={styles.statLabel}>Next Service</Text>
-                      <Text style={styles.statValue}>In 10 days</Text>
-                    </View>
-                    <View style={styles.divider} />
-                    <View style={styles.statItem}>
-                      <Wrench size={18} color="#6B7280" />
-                      <Text style={styles.statLabel}>Maintenance</Text>
-                      <Text style={styles.statValue}>3 items</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
+              {fetchedVehicles
+                .slice()
+                .reverse()
+                .map((vehicle) => (
+                  <VehicleCard
+                    key={vehicle.id}
+                    vehicle={vehicle}
+                    userId={user?.uuid}
+                    onPress={() => router.push(`/vehicle/${vehicle.id}`)}
+                  />
+                ))}
             </View>
 
             <View style={styles.tipsContainer}>
@@ -162,6 +249,18 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    marginTop: 48,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -169,8 +268,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   headerTitle: {
-    fontFamily: 'Inter-Bold',
     fontSize: 20,
+    fontWeight: 'bold',
     color: '#1F2937',
   },
   addButton: {
@@ -179,8 +278,8 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   addButtonText: {
-    fontFamily: 'Inter-Medium',
     fontSize: 16,
+    fontWeight: '500',
     color: '#3B6FE0',
     marginLeft: 4,
   },
@@ -191,14 +290,13 @@ const styles = StyleSheet.create({
     marginTop: 48,
   },
   emptyStateTitle: {
-    fontFamily: 'Inter-Bold',
     fontSize: 20,
+    fontWeight: 'bold',
     color: '#1F2937',
     marginTop: 16,
     marginBottom: 8,
   },
   emptyStateText: {
-    fontFamily: 'Inter-Regular',
     fontSize: 16,
     color: '#6B7280',
     textAlign: 'center',
@@ -211,8 +309,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   addVehicleButtonText: {
-    fontFamily: 'Inter-Medium',
     fontSize: 16,
+    fontWeight: '500',
     color: '#FFFFFF',
   },
   vehicleCards: {
@@ -232,6 +330,13 @@ const styles = StyleSheet.create({
   vehicleImageContainer: {
     height: 160,
     position: 'relative',
+    backgroundColor: '#F3F4F6',
+  },
+  noImagePlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
   },
   vehicleImage: {
     width: '100%',
@@ -252,14 +357,14 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   vehicleName: {
-    fontFamily: 'Inter-Bold',
     fontSize: 18,
+    fontWeight: 'bold',
     color: '#FFFFFF',
     marginBottom: 4,
   },
   vehiclePlate: {
-    fontFamily: 'Inter-Medium',
     fontSize: 14,
+    fontWeight: '500',
     color: '#FFFFFF',
     opacity: 0.9,
   },
@@ -274,14 +379,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statLabel: {
-    fontFamily: 'Inter-Regular',
     fontSize: 12,
     color: '#6B7280',
     marginTop: 4,
   },
   statValue: {
-    fontFamily: 'Inter-Medium',
     fontSize: 14,
+    fontWeight: '500',
     color: '#1F2937',
     marginTop: 2,
   },
@@ -317,13 +421,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tipTitle: {
-    fontFamily: 'Inter-Bold',
     fontSize: 16,
+    fontWeight: 'bold',
     color: '#1F2937',
     marginBottom: 4,
   },
   tipText: {
-    fontFamily: 'Inter-Regular',
     fontSize: 14,
     color: '#6B7280',
   },

@@ -1,28 +1,22 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Image,
-} from 'react-native';
-import { useRouter, Stack } from 'expo-router';
-import {
-  ArrowLeft,
-  Calendar,
-  Camera,
-  Upload,
-  Car,
-  Palette,
-  FileText,
-  Hash,
-} from 'lucide-react-native';
+import { useAddVehicle } from '@/database/useAddVehicle';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import { Stack, useRouter } from 'expo-router';
+import { ArrowLeft, Calendar, Upload } from 'lucide-react-native';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 30 }, (_, i) => CURRENT_YEAR - i);
@@ -41,26 +35,48 @@ export default function AddVehicleScreen() {
   const [image, setImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = () => {
+  const {
+    addVehicle,
+    loading: saving,
+    error: addVehicleError,
+    userLoading,
+  } = useAddVehicle();
+
+  const handleSubmit = async () => {
     if (!make || !model || !year || !licensePlate || !mileage) {
       setError('Please fill in all required fields');
       return;
     }
 
-    // Here you would typically make an API call to save the vehicle
-    console.log('Saving vehicle:', {
-      make,
-      model,
-      year: parseInt(year, 10),
-      color,
-      licensePlate,
-      vin,
-      mileage: parseInt(mileage, 10),
-      purchaseDate,
-      imageUrl: image,
-    });
+    if (userLoading) {
+      setError('User data is still loading, please wait.');
+      return;
+    }
 
-    router.back();
+    setError(null);
+
+    try {
+      const success = await addVehicle({
+        make,
+        model,
+        year: parseInt(year, 10),
+        color,
+        licensePlate,
+        vin,
+        mileage: parseInt(mileage, 10),
+        purchaseDate: purchaseDate.toISOString(),
+        imageUri: image || undefined,
+      });
+
+      if (success) {
+        router.back();
+      } else {
+        setError(addVehicleError || 'Failed to save vehicle');
+      }
+    } catch (e) {
+      console.error('Submission error:', e);
+      setError(e instanceof Error ? e.message : 'Failed to save vehicle');
+    }
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
@@ -71,23 +87,31 @@ export default function AddVehicleScreen() {
   };
 
   const handleAddImage = async () => {
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
+    try {
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    if (permissionResult.granted === false) {
-      alert('Permission to access camera roll is required!');
-      return;
-    }
+      if (permissionResult.granted === false) {
+        Alert.alert(
+          'Permission required',
+          'Permission to access camera roll is required!'
+        );
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [16, 9],
-      quality: 1,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 1,
+      });
 
-    if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      if (!result.canceled && result.assets.length > 0) {
+        setImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Image picker error:', error);
+      setError('Failed to select image');
     }
   };
 
@@ -253,8 +277,16 @@ export default function AddVehicleScreen() {
             )}
           </View>
 
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-            <Text style={styles.submitButtonText}>Add Vehicle</Text>
+          <TouchableOpacity
+            style={styles.submitButton}
+            onPress={handleSubmit}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.submitButtonText}>Add Vehicle</Text>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -269,6 +301,7 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     padding: 8,
+    marginLeft: 8,
   },
   scrollView: {
     flex: 1,
@@ -282,7 +315,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: '#B91C1C',
-    fontFamily: 'Inter-Medium',
     fontSize: 14,
   },
   imageSection: {
@@ -316,7 +348,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   changeImageText: {
-    fontFamily: 'Inter-Medium',
     fontSize: 14,
     color: '#FFFFFF',
   },
@@ -340,7 +371,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   uploadButtonText: {
-    fontFamily: 'Inter-Medium',
     fontSize: 16,
     color: '#3B6FE0',
     marginLeft: 8,
@@ -360,16 +390,15 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   sectionTitle: {
-    fontFamily: 'Inter-Bold',
     fontSize: 18,
     color: '#1F2937',
     marginBottom: 16,
+    fontWeight: 'bold',
   },
   inputContainer: {
     marginBottom: 16,
   },
   label: {
-    fontFamily: 'Inter-Medium',
     fontSize: 14,
     color: '#4B5563',
     marginBottom: 8,
@@ -379,7 +408,6 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     borderRadius: 8,
     padding: 12,
-    fontFamily: 'Inter-Regular',
     fontSize: 16,
     color: '#1F2937',
     backgroundColor: '#F9FAFB',
@@ -394,7 +422,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   datePickerText: {
-    fontFamily: 'Inter-Regular',
     fontSize: 16,
     color: '#1F2937',
     marginLeft: 8,
@@ -407,8 +434,8 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   submitButtonText: {
-    fontFamily: 'Inter-Medium',
     fontSize: 16,
     color: '#FFFFFF',
+    fontWeight: '500',
   },
 });

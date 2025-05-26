@@ -1,64 +1,119 @@
-import React, { useState, useEffect } from 'react';
+import { useDeleteMaintenance } from '@/database/useDeleteMaintenance';
+import { useMaintenanceRecord } from '@/database/useMaintenanceRecord';
+import { useUpdateMaintenanceStatus } from '@/database/useUpdateMaintenanceStatus';
+import { supabase } from '@/lib/supabase';
+import { Vehicle } from '@/types';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  Platform,
-} from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import {
+  AlertTriangle,
   ArrowLeft,
   Calendar,
   Car,
-  MapPin,
   DollarSign,
-  FileText,
-  Edit2,
+  MapPin,
+  Pencil,
   Trash2,
-  AlertTriangle,
 } from 'lucide-react-native';
-import { MaintenanceRecord, Vehicle } from '@/types';
-import { MOCK_MAINTENANCE, MOCK_VEHICLES } from '@/assets/MOCKDATA';
+import React, { useEffect, useState } from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 export default function MaintenanceDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const [record, setRecord] = useState<MaintenanceRecord | null>(null);
+  const { record, loading, error } = useMaintenanceRecord(id as string);
+  const { deleteMaintenanceRecord } = useDeleteMaintenance();
+  const { updateStatus } = useUpdateMaintenanceStatus();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<
+    'pending' | 'scheduled' | 'completed'
+  >(
+    record?.isDone ? 'completed' : record?.isScheduled ? 'scheduled' : 'pending'
+  );
 
   useEffect(() => {
-    // Find maintenance record by id
-    const foundRecord = MOCK_MAINTENANCE.find((m) => m.id === id);
-    if (foundRecord) {
-      setRecord(foundRecord);
-      // Find associated vehicle
-      const foundVehicle = MOCK_VEHICLES.find(
-        (v) => v.id === foundRecord.vehicleId
-      );
-      if (foundVehicle) {
-        setVehicle(foundVehicle);
+    const fetchVehicle = async () => {
+      if (!record?.vehicleId) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('cars')
+          .select('*')
+          .eq('id', record.vehicleId)
+          .single();
+
+        if (error) throw error;
+        setVehicle(data as Vehicle);
+      } catch (err) {
+        console.error('Error fetching vehicle');
       }
+    };
+
+    fetchVehicle();
+  }, [record]);
+
+  useEffect(() => {
+    if (record) {
+      setSelectedStatus(
+        record.isDone
+          ? 'completed'
+          : record.isScheduled
+          ? 'scheduled'
+          : 'pending'
+      );
     }
-  }, [id]);
+  }, [record]);
 
-  const handleDelete = () => {
-    // Here you would typically make an API call to delete the record
-    console.log('Deleting record:', id);
-    router.back();
+  const handleDelete = async () => {
+    await deleteMaintenanceRecord(id as string);
+    setShowDeleteConfirm(false);
   };
 
-  const handleEdit = () => {
-    router.push(`/maintenance/edit/${id}`);
+  const handleStatusChange = async () => {
+    const statusUpdate = {
+      isScheduled: selectedStatus === 'scheduled',
+      isDone: selectedStatus === 'completed',
+    };
+
+    const success = await updateStatus(id as string, statusUpdate);
+    if (success) {
+      setShowStatusModal(false);
+    }
   };
+
+  const statusOptions = [
+    { value: 'pending', label: 'Pending' },
+    { value: 'scheduled', label: 'Scheduled' },
+    { value: 'completed', label: 'Completed' },
+  ];
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text>Error: {error}</Text>
+      </View>
+    );
+  }
 
   if (!record || !vehicle) {
     return (
       <View style={styles.container}>
-        <Text>Loading...</Text>
+        <Text>Record not found</Text>
       </View>
     );
   }
@@ -79,6 +134,14 @@ export default function MaintenanceDetailScreen() {
           ),
           headerRight: () => (
             <View style={styles.headerButtons}>
+              <TouchableOpacity
+                onPress={() => setShowStatusModal(true)}
+                style={[styles.headerButton, { marginRight: 16 }]}
+              >
+                <Text style={styles.editButtonText}>
+                  <Pencil size={14} />
+                </Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setShowDeleteConfirm(true)}
                 style={styles.headerButton}
@@ -115,24 +178,24 @@ export default function MaintenanceDetailScreen() {
               <View style={styles.detailItem}>
                 <Car size={20} color="#6B7280" />
                 <View style={styles.detailText}>
-                  <Text style={styles.detailLabel}>Mileage</Text>
+                  <Text style={styles.detailLabel}>Kilometrage</Text>
                   <Text style={styles.detailValue}>
-                    {record.mileage.toLocaleString()} mi
+                    {record.mileage.toLocaleString()} klm
                   </Text>
                 </View>
               </View>
             </View>
 
             <View style={styles.detailRow}>
-              <View style={styles.detailItem}>
-                <DollarSign size={20} color="#6B7280" />
-                <View style={styles.detailText}>
-                  <Text style={styles.detailLabel}>Cost</Text>
-                  <Text style={styles.detailValue}>
-                    ${record.cost.toFixed(2)}
-                  </Text>
+              {record.cost && (
+                <View style={styles.detailItem}>
+                  <DollarSign size={20} color="#6B7280" />
+                  <View style={styles.detailText}>
+                    <Text style={styles.detailLabel}>Cost</Text>
+                    <Text style={styles.detailValue}>dzd{record.cost}</Text>
+                  </View>
                 </View>
-              </View>
+              )}
               {record.location && (
                 <View style={styles.detailItem}>
                   <MapPin size={20} color="#6B7280" />
@@ -143,6 +206,28 @@ export default function MaintenanceDetailScreen() {
                 </View>
               )}
             </View>
+
+            <View style={styles.statusRow}>
+              <Text style={styles.detailLabel}>Status:</Text>
+              <View
+                style={[
+                  styles.statusBadge,
+                  record.isDone
+                    ? styles.statusDone
+                    : record.isScheduled
+                    ? styles.statusScheduled
+                    : styles.statusPending,
+                ]}
+              >
+                <Text style={styles.statusText}>
+                  {record.isDone
+                    ? 'Completed'
+                    : record.isScheduled
+                    ? 'Scheduled'
+                    : 'Pending'}
+                </Text>
+              </View>
+            </View>
           </View>
 
           {record.description && (
@@ -151,20 +236,51 @@ export default function MaintenanceDetailScreen() {
               <Text style={styles.description}>{record.description}</Text>
             </View>
           )}
-
-          {record.receipt && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Receipt</Text>
-              <Image
-                source={{ uri: record.receipt }}
-                style={styles.receiptImage}
-                resizeMode="contain"
-              />
-            </View>
-          )}
         </View>
       </ScrollView>
 
+      {/* Status Update Modal */}
+      {showStatusModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Update Status</Text>
+
+            {statusOptions.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={[
+                  styles.statusOption,
+                  selectedStatus === option.value &&
+                    styles.statusOptionSelected,
+                ]}
+                onPress={() => setSelectedStatus(option.value as any)}
+              >
+                <Text style={styles.statusOptionText}>{option.label}</Text>
+                {selectedStatus === option.value && (
+                  <View style={styles.statusOptionCheck} />
+                )}
+              </TouchableOpacity>
+            ))}
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowStatusModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmButton}
+                onPress={handleStatusChange}
+              >
+                <Text style={styles.confirmButtonText}>Update</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -209,6 +325,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  editButtonText: {
+    color: '#3B82F6',
+    fontWeight: '500',
+  },
   content: {
     padding: 16,
   },
@@ -249,6 +369,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 16,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  statusDone: {
+    backgroundColor: '#D1FAE5',
+  },
+  statusScheduled: {
+    backgroundColor: '#DBEAFE',
+  },
+  statusPending: {
+    backgroundColor: '#FEE2E2',
+  },
+  statusText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 14,
+    color: '#1F2937',
   },
   detailItem: {
     flex: 1,
@@ -295,11 +440,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#4B5563',
     lineHeight: 24,
-  },
-  receiptImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 8,
   },
   modalOverlay: {
     position: 'absolute',
@@ -366,5 +506,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#EF4444',
     textAlign: 'center',
+  },
+  statusOption: {
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    marginBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statusOptionSelected: {
+    borderColor: '#3B82F6',
+    backgroundColor: '#EFF6FF',
+  },
+  statusOptionText: {
+    fontSize: 16,
+    color: '#1F2937',
+  },
+  statusOptionCheck: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#3B82F6',
+  },
+  confirmButton: {
+    flex: 1,
+    backgroundColor: '#3B82F6',
+    borderRadius: 8,
+    padding: 12,
+    marginLeft: 8,
+  },
+  confirmButtonText: {
+    color: '#FFFFFF',
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });

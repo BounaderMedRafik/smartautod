@@ -5,8 +5,8 @@ export interface User {
 }
 
 export interface Vehicle {
-  id: string;
-  userId: string;
+  id: string; //auto generated from supabase
+  userId: string; // get it using useStoredData.ts
   make: string;
   model: string;
   year: number;
@@ -21,14 +21,13 @@ export interface Vehicle {
 export interface MaintenanceRecord {
   id: string;
   vehicleId: string;
+  userid: string | undefined;
   title: string;
   description: string;
   date: string;
   mileage: number;
-  cost: number;
+  cost?: number;
   location?: string;
-  receipt?: string;
-  mechanic?: string;
   isScheduled: boolean;
   isDone: boolean;
 }
@@ -40,23 +39,23 @@ export interface FinancialRecord {
   amount: number;
   date: string;
   description: string;
-  receipt?: string;
 }
 
 export interface Reminder {
   id: string;
   vehicleId: string;
+  userid: string | undefined;
   title: string;
   description: string;
   dueDate: string;
   dueMileage?: number;
-  type: 'maintenance' | 'insurance' | 'tax' | 'other';
+  type: 'fuel' | 'maintenance' | 'insurance' | 'tax' | 'other';
   isComplete: boolean;
   recurringInterval?: number; // in days
   recurringMileage?: number; // after how many miles
 }
 
-export type MaintenanceType = 
+export type MaintenanceType =
   | 'oil_change'
   | 'tire_rotation'
   | 'air_filter'
@@ -71,4 +70,10 @@ export interface AuthState {
   token: string | null;
   isLoading: boolean;
   isSignout: boolean;
+}
+
+export interface VehicleCardProps {
+  vehicle: Vehicle;
+  userId: string | undefined;
+  onPress: () => void;
 }

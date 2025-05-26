@@ -1,62 +1,70 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Image,
-  Alert,
-} from 'react-native';
-import { useRouter, Stack } from 'expo-router';
+import { useAddFinancialRecord } from '@/database/useAddFinancialRecord';
+import { useUserVehicles } from '@/database/useFetchAllCarsById';
+import { Vehicle } from '@/types';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Stack, useRouter } from 'expo-router';
 import {
   ArrowLeft,
   Calendar,
-  Car,
-  DollarSign,
   ChevronDown,
-  Upload,
+  FileText,
   Fuel,
   Shield,
-  FileText,
   Tag,
+  Wrench,
 } from 'lucide-react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import * as ImagePicker from 'expo-image-picker';
-import { Vehicle } from '@/types';
-import { EXPENSE_TYPES, MOCK_VEHICLES } from '@/assets/MOCKDATA';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 export default function AddFinanceScreen() {
   const router = useRouter();
-  const [type, setType] = useState('');
-  const [description, setDescription] = useState('');
+  const [type, setType] = useState<
+    'fuel' | 'insurance' | 'tax' | 'maintenance' | 'other'
+  >('fuel');
+  const [amount, setAmount] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState<string>('');
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [amount, setAmount] = useState('');
-  const [receipt, setReceipt] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [description, setDescription] = useState('');
+  const [receipt, setReceipt] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isVehicleModalVisible, setIsVehicleModalVisible] = useState(false);
 
-  const handleSubmit = () => {
-    if (!type || !selectedVehicle || !date || !amount) {
-      setError('Please fill in all required fields');
+  const { addFinancialRecord, loading, error } = useAddFinancialRecord();
+  const { vehicles, loading: vehiclesLoading } = useUserVehicles();
+
+  const handleSubmit = async () => {
+    if (!selectedVehicle || !amount) {
+      setFormError('Please fill in all required fields');
       return;
     }
 
-    // Here you would typically make an API call to save the financial record
-    console.log('Saving financial record:', {
-      type,
-      description,
+    const record = {
       vehicleId: selectedVehicle,
-      date,
+      type,
       amount: parseFloat(amount),
-      receipt,
-    });
+      date: date.toISOString(),
+      description,
+      receipt: receipt || undefined,
+    };
 
-    router.back();
+    const result = await addFinancialRecord(record);
+
+    if (result) {
+      router.back();
+    }
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
@@ -66,45 +74,42 @@ export default function AddFinanceScreen() {
     }
   };
 
-  const handleSelectVehicle = () => {
-    Alert.alert(
-      'Select Vehicle',
-      '',
-      MOCK_VEHICLES.map((vehicle) => ({
-        text: `${vehicle.make} ${vehicle.model}`,
-        onPress: () => setSelectedVehicle(vehicle.id),
-      })),
-      { cancelable: true }
-    );
+  const handleSelectVehicle = (vehicleId: string) => {
+    setSelectedVehicle(vehicleId);
+    setIsVehicleModalVisible(false);
   };
 
-  const handleAddReceipt = async () => {
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
+  const renderVehicleItem = ({ item }: { item: Vehicle }) => (
+    <TouchableOpacity
+      style={styles.vehicleItem}
+      onPress={() => handleSelectVehicle(item.id)}
+    >
+      <Text style={styles.vehicleItemText}>
+        {item.year} {item.make} {item.model}
+      </Text>
+      {selectedVehicle === item.id && <View style={styles.selectedIndicator} />}
+    </TouchableOpacity>
+  );
 
-    if (permissionResult.granted === false) {
-      alert('Permission to access camera roll is required!');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      setReceipt(result.assets[0].uri);
-    }
-  };
+  const typeOptions = [
+    { value: 'fuel', label: 'Fuel', icon: Fuel, color: '#F59E0B' },
+    { value: 'insurance', label: 'Insurance', icon: Shield, color: '#10B981' },
+    { value: 'tax', label: 'Tax', icon: FileText, color: '#8B5CF6' },
+    {
+      value: 'maintenance',
+      label: 'Maintenance',
+      icon: Wrench,
+      color: '#3B82F6',
+    },
+    { value: 'other', label: 'Other', icon: Tag, color: '#6B7280' },
+  ];
 
   return (
     <>
       <Stack.Screen
         options={{
           headerShown: true,
-          headerTitle: 'Add Expense',
+          headerTitle: 'Add Expense Record',
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.back()}
@@ -115,55 +120,62 @@ export default function AddFinanceScreen() {
           ),
         }}
       />
+
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView style={styles.scrollView}>
-          {error && (
+          {(formError || error) && (
             <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={styles.errorText}>{formError || error}</Text>
             </View>
           )}
 
           <View style={styles.formSection}>
             <Text style={styles.sectionTitle}>Expense Type</Text>
 
-            <View style={styles.typeGrid}>
-              {EXPENSE_TYPES.map((expenseType) => (
+            <View style={styles.typeSelector}>
+              {typeOptions.map((option) => (
                 <TouchableOpacity
-                  key={expenseType.id}
+                  key={option.value}
                   style={[
-                    styles.typeButton,
-                    type === expenseType.id && styles.typeButtonActive,
+                    styles.typeOption,
+                    type === option.value && {
+                      backgroundColor: option.color,
+                      borderColor: option.color,
+                    },
                   ]}
-                  onPress={() => setType(expenseType.id)}
+                  onPress={() => setType(option.value as any)}
                 >
-                  <expenseType.icon
-                    size={24}
-                    color={type === expenseType.id ? '#3B6FE0' : '#6B7280'}
+                  <option.icon
+                    size={20}
+                    color={type === option.value ? '#FFFFFF' : option.color}
                   />
                   <Text
                     style={[
-                      styles.typeButtonText,
-                      type === expenseType.id && styles.typeButtonTextActive,
+                      styles.typeOptionText,
+                      type === option.value && { color: '#FFFFFF' },
                     ]}
                   >
-                    {expenseType.label}
+                    {option.label}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
+          </View>
+
+          <View style={styles.formSection}>
+            <Text style={styles.sectionTitle}>Expense Details</Text>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Description</Text>
+              <Text style={styles.label}>Amount *</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
-                value={description}
-                onChangeText={setDescription}
-                placeholder="Add any additional details"
-                multiline
-                numberOfLines={4}
+                style={styles.input}
+                value={amount}
+                onChangeText={setAmount}
+                placeholder="e.g., 49.99"
+                keyboardType="decimal-pad"
               />
             </View>
 
@@ -171,23 +183,18 @@ export default function AddFinanceScreen() {
               <Text style={styles.label}>Vehicle *</Text>
               <TouchableOpacity
                 style={styles.selectButton}
-                onPress={handleSelectVehicle}
+                onPress={() => setIsVehicleModalVisible(true)}
               >
                 <Text style={styles.selectButtonText}>
-                  {selectedVehicle
-                    ? MOCK_VEHICLES.find((v) => v.id === selectedVehicle)
-                        ?.make +
-                      ' ' +
-                      MOCK_VEHICLES.find((v) => v.id === selectedVehicle)?.model
+                  {selectedVehicle && vehicles
+                    ? `${vehicles.find((v) => v.id === selectedVehicle)?.year} 
+                       ${vehicles.find((v) => v.id === selectedVehicle)?.make} 
+                       ${vehicles.find((v) => v.id === selectedVehicle)?.model}`
                     : 'Select a vehicle'}
                 </Text>
                 <ChevronDown size={20} color="#6B7280" />
               </TouchableOpacity>
             </View>
-          </View>
-
-          <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Expense Details</Text>
 
             <TouchableOpacity
               style={styles.datePickerButton}
@@ -210,52 +217,62 @@ export default function AddFinanceScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Amount *</Text>
-              <View style={styles.amountInputContainer}>
-                <Text style={styles.currencySymbol}>DZD</Text>
-                <TextInput
-                  style={styles.amountInput}
-                  value={amount}
-                  onChangeText={setAmount}
-                  placeholder="0.00"
-                  keyboardType="decimal-pad"
-                />
-              </View>
+              <Text style={styles.label}>Description</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Add any additional details"
+                multiline
+                numberOfLines={4}
+              />
             </View>
           </View>
 
-          <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Receipt</Text>
-
-            {receipt ? (
-              <View style={styles.receiptContainer}>
-                <Image
-                  source={{ uri: receipt }}
-                  style={styles.receiptImage}
-                  resizeMode="cover"
-                />
-                <TouchableOpacity
-                  style={styles.changeReceiptButton}
-                  onPress={handleAddReceipt}
-                >
-                  <Text style={styles.changeReceiptText}>Change Receipt</Text>
-                </TouchableOpacity>
-              </View>
+          <TouchableOpacity
+            style={styles.submitButton}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <TouchableOpacity
-                style={styles.uploadButton}
-                onPress={handleAddReceipt}
-              >
-                <Upload size={24} color="#3B6FE0" />
-                <Text style={styles.uploadButtonText}>Upload Receipt</Text>
-              </TouchableOpacity>
+              <Text style={styles.submitButtonText}>Save Expense</Text>
             )}
-          </View>
-
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-            <Text style={styles.submitButtonText}>Save Expense</Text>
           </TouchableOpacity>
         </ScrollView>
+
+        {/* Vehicle Selection Modal */}
+        <Modal
+          visible={isVehicleModalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setIsVehicleModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Vehicle</Text>
+                <TouchableOpacity
+                  onPress={() => setIsVehicleModalVisible(false)}
+                >
+                  <Text style={styles.modalCloseText}>Close</Text>
+                </TouchableOpacity>
+              </View>
+
+              {vehiclesLoading ? (
+                <ActivityIndicator size="large" color="#3B6FE0" />
+              ) : (
+                <FlatList
+                  data={vehicles}
+                  renderItem={renderVehicleItem}
+                  keyExtractor={(item) => item.id}
+                  contentContainerStyle={styles.vehicleList}
+                />
+              )}
+            </View>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </>
   );
@@ -360,6 +377,26 @@ const styles = StyleSheet.create({
     height: 100,
     textAlignVertical: 'top',
   },
+  typeSelector: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  typeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  typeOptionText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#1F2937',
+  },
   selectButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -390,6 +427,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1F2937',
     marginLeft: 8,
+  },
+  vehicleItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  vehicleItemText: {
+    fontSize: 16,
+    color: '#1F2937',
+  },
+  selectedIndicator: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#3B82F6',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 16,
+    maxHeight: '60%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  modalCloseText: {
+    fontSize: 16,
+    color: '#3B82F6',
+    fontWeight: '500',
+  },
+  vehicleList: {
+    paddingBottom: 32,
   },
   amountInputContainer: {
     flexDirection: 'row',

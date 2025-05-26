@@ -16,6 +16,9 @@
       "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
+    "androidNavigationBar": {
+      "visible": "leanback"
+    },
     "plugins": ["expo-router", "expo-font", "expo-web-browser"],
     "experiments": {
       "typedRoutes": true

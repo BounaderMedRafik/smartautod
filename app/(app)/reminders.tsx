@@ -1,5 +1,7 @@
 import { MOCK_REMINDERS, MOCK_VEHICLES } from '@/assets/MOCKDATA';
-import { Reminder } from '@/types';
+import { useUserReminders } from '@/database/useUserReminders';
+import { supabase } from '@/lib/supabase';
+import { Reminder, Vehicle } from '@/types';
 import { useRouter } from 'expo-router';
 import {
   AlertCircle,
@@ -12,6 +14,7 @@ import {
 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -21,54 +24,82 @@ import {
   View,
 } from 'react-native';
 
-const getIconForType = (
-  type: string,
-  size: number = 20,
-  color: string = '#3B6FE0'
-) => {
-  switch (type) {
-    case 'maintenance':
-      return <Leaf size={size} color={color} />;
-    case 'insurance':
-      return <ShieldCheck size={size} color={color} />;
-    case 'tax':
-      return <Clock size={size} color={color} />;
-    default:
-      return <AlertCircle size={size} color={color} />;
-  }
-};
-
 export default function RemindersScreen() {
-  const [refreshing, setRefreshing] = useState(false);
-  const [reminders, setReminders] = useState<Reminder[]>(MOCK_REMINDERS);
-  const [showCompleted, setShowCompleted] = useState(false);
   const router = useRouter();
+  const [showCompleted, setShowCompleted] = useState(false);
+  const { reminders, vehicles, isLoading, error, refresh } = useUserReminders();
+  const [refreshing, setRefreshing] = useState(false);
 
-  const onRefresh = React.useCallback(() => {
+  const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    // Simulate a refresh
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
-  }, []);
+    await refresh();
+    setRefreshing(false);
+  }, [refresh]);
 
   const handleAddReminder = () => {
     router.push('/reminder/add');
   };
 
   const handleReminderPress = (reminderId: string) => {
-    //@ts-ignore
     router.push(`/reminder/${reminderId}`);
   };
 
-  const toggleReminderComplete = (reminderId: string) => {
-    setReminders((prevReminders) =>
-      prevReminders.map((reminder) =>
-        reminder.id === reminderId
-          ? { ...reminder, isComplete: !reminder.isComplete }
-          : reminder
-      )
-    );
+  const toggleReminderComplete = async (reminderId: string) => {
+    try {
+      const reminder = reminders.find((r: Reminder) => r.id === reminderId);
+      if (!reminder) return;
+
+      const { error } = await supabase
+        .from('reminders')
+        .update({ isComplete: !reminder.isComplete })
+        .eq('id', reminderId);
+
+      if (!error) {
+        await refresh();
+      }
+    } catch (err) {
+      console.error('Failed to update reminder:', err);
+    }
+  };
+
+  const getDaysUntilDue = (dueDate: string) => {
+    const today = new Date();
+    const due = new Date(dueDate);
+    const diffTime = due.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getStatusColor = (daysUntil: number, isComplete: boolean) => {
+    if (isComplete) return '#10B981';
+    if (daysUntil < 0) return '#EF4444';
+    if (daysUntil < 7) return '#F59E0B';
+    return '#6B7280';
+  };
+
+  const getStatusText = (daysUntil: number, isComplete: boolean) => {
+    if (isComplete) return 'Completed';
+    if (daysUntil < 0) return 'Overdue';
+    if (daysUntil === 0) return 'Due today';
+    if (daysUntil === 1) return 'Due tomorrow';
+    return `Due in ${daysUntil} days`;
+  };
+
+  const getIconForType = (
+    type: string,
+    size: number = 20,
+    color: string = '#3B6FE0'
+  ) => {
+    switch (type) {
+      case 'maintenance':
+        return <Leaf size={size} color={color} />;
+      case 'insurance':
+        return <ShieldCheck size={size} color={color} />;
+      case 'tax':
+        return <Clock size={size} color={color} />;
+      default:
+        return <AlertCircle size={size} color={color} />;
+    }
   };
 
   const filteredReminders = React.useMemo(() => {
@@ -85,31 +116,8 @@ export default function RemindersScreen() {
     });
   }, [reminders, showCompleted]);
 
-  const getDaysUntilDue = (dueDate: string) => {
-    const today = new Date();
-    const due = new Date(dueDate);
-    const diffTime = due.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  const getStatusColor = (daysUntil: number, isComplete: boolean) => {
-    if (isComplete) return '#10B981'; // Green
-    if (daysUntil < 0) return '#EF4444'; // Red - overdue
-    if (daysUntil < 7) return '#F59E0B'; // Yellow - due soon
-    return '#6B7280'; // Gray - due later
-  };
-
-  const getStatusText = (daysUntil: number, isComplete: boolean) => {
-    if (isComplete) return 'Completed';
-    if (daysUntil < 0) return 'Overdue';
-    if (daysUntil === 0) return 'Due today';
-    if (daysUntil === 1) return 'Due tomorrow';
-    return `Due in ${daysUntil} days`;
-  };
-
   const renderReminderItem = ({ item }: { item: Reminder }) => {
-    const vehicle = MOCK_VEHICLES.find((v) => v.id === item.vehicleId);
+    const vehicle = vehicles.find((v: Vehicle) => v.id === item.vehicleId);
     const daysUntil = getDaysUntilDue(item.dueDate);
     const statusColor = getStatusColor(daysUntil, item.isComplete);
     const statusText = getStatusText(daysUntil, item.isComplete);
@@ -148,10 +156,13 @@ export default function RemindersScreen() {
             </Text>
           </View>
           <TouchableOpacity
-            onPress={() => toggleReminderComplete(item.id)}
+            onPress={(e) => {
+              e.stopPropagation();
+              toggleReminderComplete(item.id);
+            }}
             style={[
               styles.statusBadge,
-              { backgroundColor: statusColor + '20' }, // Add transparency
+              { backgroundColor: statusColor + '20' },
             ]}
           >
             <Text style={[styles.statusText, { color: statusColor }]}>
@@ -182,6 +193,25 @@ export default function RemindersScreen() {
       </TouchableOpacity>
     );
   };
+
+  if (isLoading && reminders.length === 0) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#3B6FE0" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={refresh}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -252,6 +282,36 @@ const styles = StyleSheet.create({
   },
   headerTitleSection: {
     flex: 1,
+  },
+  errorText: {
+    color: '#EF4444', // red-500
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 20,
+  },
+
+  retryButton: {
+    backgroundColor: '#3B82F6', // blue-500
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   headerTitle: {
     fontFamily: 'Inter-Bold',

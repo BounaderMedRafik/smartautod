@@ -1,71 +1,91 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  Dimensions,
-} from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import {
-  ArrowLeft,
-  Calendar,
-  Car,
-  Fuel,
-  Clock,
-  Settings,
-  MoreVertical,
-  Wrench,
-  Bell,
-  DollarSign,
-  ChevronRight,
-  Shield,
-  PlusCircle,
-  MapPin,
-  FileText,
-} from 'lucide-react-native';
+import { useDeleteVehicle } from '@/database/useDeleteVehicle';
+import { useFetchCarById } from '@/database/useFetchCarById';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Vehicle, MaintenanceRecord, FinancialRecord, Reminder } from '@/types';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
-  MOCK_FINANCE,
-  MOCK_MAINTENANCE,
-  MOCK_REMINDERS,
-  MOCK_VEHICLES,
-} from '@/assets/MOCKDATA';
+  AlertTriangle,
+  Bell,
+  Car,
+  ChevronRight,
+  DollarSign,
+  FileText,
+  Fuel,
+  MapPin,
+  MoreVertical,
+  PlusCircle,
+  Shield,
+  Trash2,
+  Wrench,
+} from 'lucide-react-native';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 export default function VehicleDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
-  const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);
-  const [finances, setFinances] = useState<FinancialRecord[]>([]);
-  const [reminders, setReminders] = useState<Reminder[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
+  const [refreshing, setRefreshing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const { deleteVehicle, isDeleting, error: DeleteError } = useDeleteVehicle();
 
-  // Get screen width to determine card sizes
-  const screenWidth = Dimensions.get('window').width;
-  const cardWidth = screenWidth - 32; // Full width with padding
+  const { vehicle, maintenance, finances, reminders, loading, error, refetch } =
+    useFetchCarById(id as string);
 
-  useEffect(() => {
-    // Find vehicle by id
-    const foundVehicle = MOCK_VEHICLES.find((v) => v.id === id);
-    if (foundVehicle) {
-      setVehicle(foundVehicle);
-
-      // Filter related records
-      setMaintenance(MOCK_MAINTENANCE.filter((m) => m.vehicleId === id));
-      setFinances(MOCK_FINANCE.filter((f) => f.vehicleId === id));
-      setReminders(MOCK_REMINDERS.filter((r) => r.vehicleId === id));
+  const handleDelete = async () => {
+    const success = await deleteVehicle(id as string);
+    if (success) {
+      router.replace('/');
     }
-  }, [id]);
+  };
+
+  const getLatestMileage = () => {
+    // Get all maintenance mileages
+    const maintenanceMileages = maintenance.map((m) => m.mileage);
+
+    // Combine all mileages with current vehicle mileage
+    const allMileages = [...maintenanceMileages, vehicle?.mileage];
+
+    // Return the highest mileage
+    //@ts-ignore
+    return Math.max(...allMileages);
+  };
+
+  if (loading && !refreshing) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#3B6FE0" />
+        <Text style={styles.loadingText}>Loading vehicle details...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>
+          Error loading vehicle: {error.message}
+        </Text>
+        <TouchableOpacity style={styles.retryButton} onPress={refetch}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (!vehicle) {
     return (
-      <View style={styles.container}>
-        <Text>Loading...</Text>
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>Vehicle not found</Text>
       </View>
     );
   }
@@ -99,9 +119,9 @@ export default function VehicleDetailScreen() {
           <Text style={styles.infoValue}>{vehicle.vin || 'Not provided'}</Text>
         </View>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Current Mileage</Text>
+          <Text style={styles.infoLabel}>Current Kilometrage</Text>
           <Text style={styles.infoValue}>
-            {vehicle.mileage.toLocaleString()} miles
+            {getLatestMileage().toLocaleString()} klms{' '}
           </Text>
         </View>
         <View style={styles.infoRow}>
@@ -160,8 +180,8 @@ export default function VehicleDetailScreen() {
                 <View style={styles.recordInfo}>
                   <Text style={styles.recordTitle}>{record.title}</Text>
                   <Text style={styles.recordDate}>
-                    {new Date(record.date).toLocaleDateString()} • $
-                    {record.cost.toFixed(2)}
+                    {new Date(record.date).toLocaleDateString()} •
+                    {record.cost ? `DZD • ${record.cost}` : 'No cost'}
                   </Text>
                 </View>
                 <ChevronRight size={20} color="#9CA3AF" />
@@ -185,48 +205,6 @@ export default function VehicleDetailScreen() {
             </TouchableOpacity>
           </View>
         )}
-      </View>
-
-      <View style={styles.financialSummary}>
-        <Text style={styles.sectionTitle}>Financial Summary</Text>
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <DollarSign size={20} color="#3B6FE0" />
-            <Text style={styles.statValue}>
-              ${finances.reduce((sum, f) => sum + f.amount, 0).toFixed(2)}
-            </Text>
-            <Text style={styles.statLabel}>Total Expenses</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Fuel size={20} color="#F59E0B" />
-            <Text style={styles.statValue}>
-              $
-              {finances
-                .filter((f) => f.type === 'fuel')
-                .reduce((sum, f) => sum + f.amount, 0)
-                .toFixed(2)}
-            </Text>
-            <Text style={styles.statLabel}>Fuel Costs</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Wrench size={20} color="#EF4444" />
-            <Text style={styles.statValue}>
-              ${maintenance.reduce((sum, m) => sum + m.cost, 0).toFixed(2)}
-            </Text>
-            <Text style={styles.statLabel}>Maintenance</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Shield size={20} color="#10B981" />
-            <Text style={styles.statValue}>
-              $
-              {finances
-                .filter((f) => f.type === 'insurance')
-                .reduce((sum, f) => sum + f.amount, 0)
-                .toFixed(2)}
-            </Text>
-            <Text style={styles.statLabel}>Insurance</Text>
-          </View>
-        </View>
       </View>
     </>
   );
@@ -259,7 +237,7 @@ export default function VehicleDetailScreen() {
                 </Text>
               </View>
               <Text style={styles.maintenanceCost}>
-                ${record.cost.toFixed(2)}
+                {record.cost ? `DZD • ${record.cost}` : 'No cost'}
               </Text>
             </View>
             {record.description && (
@@ -300,7 +278,6 @@ export default function VehicleDetailScreen() {
 
       <TouchableOpacity
         style={styles.addRecordButton}
-        //@ts-ignore
         onPress={() => router.push('/finance/add')}
       >
         <PlusCircle size={20} color="#FFFFFF" />
@@ -313,7 +290,7 @@ export default function VehicleDetailScreen() {
             <View style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>Total Expenses</Text>
               <Text style={styles.summaryAmount}>
-                ${finances.reduce((sum, f) => sum + f.amount, 0).toFixed(2)}
+                DZD • {finances.reduce((sum, f) => sum + Number(f.amount), 0)}
               </Text>
             </View>
           </View>
@@ -322,7 +299,6 @@ export default function VehicleDetailScreen() {
             <TouchableOpacity
               key={record.id}
               style={styles.financeCard}
-              //@ts-ignore
               onPress={() => router.push(`/finance/${record.id}`)}
             >
               <View style={styles.financeHeader}>
@@ -352,7 +328,7 @@ export default function VehicleDetailScreen() {
                   </Text>
                 </View>
                 <Text style={styles.financeAmount}>
-                  ${record.amount.toFixed(2)}
+                  DZD • {record.amount || 0}
                 </Text>
               </View>
               {record.description && (
@@ -391,7 +367,6 @@ export default function VehicleDetailScreen() {
           <TouchableOpacity
             key={reminder.id}
             style={styles.reminderCard}
-            //@ts-ignore
             onPress={() => router.push(`/reminder/${reminder.id}`)}
           >
             <View style={styles.reminderHeader}>
@@ -437,13 +412,25 @@ export default function VehicleDetailScreen() {
           headerShown: true,
           headerTitle: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
           headerRight: () => (
-            <TouchableOpacity style={styles.menuButton}>
-              <MoreVertical size={24} color="#1F2937" />
+            <TouchableOpacity
+              style={styles.menuButton}
+              onPress={() => setShowDeleteConfirm(true)}
+            >
+              <Trash2 size={24} color="#EF4444" />
             </TouchableOpacity>
           ),
         }}
       />
-      <ScrollView style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {}}
+            tintColor="#3B6FE0"
+          />
+        }
+      >
         <View style={styles.imageContainer}>
           <Image
             source={{
@@ -539,6 +526,39 @@ export default function VehicleDetailScreen() {
           {activeTab === 'finances' && renderFinancesTab()}
           {activeTab === 'reminders' && renderRemindersTab()}
         </View>
+        {showDeleteConfirm && (
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <AlertTriangle size={32} color="#EF4444" />
+              <Text style={styles.modalTitle}>Delete Vehicle?</Text>
+              <Text style={styles.modalMessage}>
+                This will permanently delete the vehicle and all its records.
+              </Text>
+              <Text style={styles.modalMessage}>{DeleteError}</Text>
+
+              {error && <Text style={styles.errorText}>{error}</Text>}
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setShowDeleteConfirm(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={handleDelete}
+                  disabled={isDeleting}
+                >
+                  <Text style={styles.deleteButtonText}>
+                    {isDeleting ? 'Deleting...' : 'Delete'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
       </ScrollView>
     </>
   );
@@ -548,6 +568,116 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#EF4444',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 24,
+    width: '85%',
+  },
+  modalIcon: {
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+  cancelButton: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    flex: 1,
+    marginRight: 8,
+  },
+  cancelButtonText: {
+    color: '#374151',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  deleteButton: {
+    backgroundColor: '#EF4444',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    flex: 1,
+    marginLeft: 8,
+  },
+  deleteButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+
+  retryButton: {
+    backgroundColor: '#3B6FE0',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#6B7280',
   },
   menuButton: {
     padding: 8,
@@ -576,16 +706,16 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   vehicleName: {
-    fontFamily: 'Inter-Bold',
     fontSize: 24,
+    fontWeight: 'bold',
     color: '#FFFFFF',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: -1, height: 1 },
     textShadowRadius: 10,
   },
   licensePlate: {
-    fontFamily: 'Inter-Medium',
     fontSize: 16,
+    fontWeight: '500',
     color: '#FFFFFF',
     opacity: 0.9,
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
@@ -612,8 +742,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#3B6FE0',
   },
   tabText: {
-    fontFamily: 'Inter-Medium',
     fontSize: 16,
+    fontWeight: '500',
     color: '#6B7280',
   },
   activeTabText: {
@@ -638,8 +768,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   infoTitle: {
-    fontFamily: 'Inter-Bold',
     fontSize: 18,
+    fontWeight: 'bold',
     color: '#1F2937',
     marginBottom: 12,
   },
@@ -651,21 +781,20 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F3F4F6',
   },
   infoLabel: {
-    fontFamily: 'Inter-Regular',
     fontSize: 16,
     color: '#6B7280',
   },
   infoValue: {
-    fontFamily: 'Inter-Medium',
     fontSize: 16,
+    fontWeight: '500',
     color: '#1F2937',
   },
   upcomingContainer: {
     marginBottom: 16,
   },
   sectionTitle: {
-    fontFamily: 'Inter-Bold',
     fontSize: 18,
+    fontWeight: 'bold',
     color: '#1F2937',
     marginBottom: 12,
   },
@@ -702,13 +831,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   reminderTitle: {
-    fontFamily: 'Inter-Medium',
     fontSize: 16,
+    fontWeight: '500',
     color: '#1F2937',
     marginBottom: 4,
   },
   reminderDue: {
-    fontFamily: 'Inter-Regular',
     fontSize: 14,
     color: '#6B7280',
   },
@@ -726,12 +854,11 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  emptyText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 16,
-    color: '#6B7280',
-    marginBottom: 12,
-  },
+  // emptyText: {
+  //   fontSize: 16,
+  //   color: '#6B7280',
+  //   marginBottom: 12,
+  // },
   addButton: {
     backgroundColor: '#3B6FE0',
     paddingVertical: 8,
@@ -739,8 +866,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   addButtonText: {
-    fontFamily: 'Inter-Medium',
+    marginTop: 14,
     fontSize: 14,
+    fontWeight: '500',
     color: '#FFFFFF',
   },
   recentContainer: {
@@ -779,13 +907,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   recordTitle: {
-    fontFamily: 'Inter-Medium',
     fontSize: 16,
+    fontWeight: '500',
     color: '#1F2937',
     marginBottom: 4,
   },
   recordDate: {
-    fontFamily: 'Inter-Regular',
     fontSize: 14,
     color: '#6B7280',
   },
@@ -796,8 +923,8 @@ const styles = StyleSheet.create({
     borderTopColor: '#F3F4F6',
   },
   viewAllText: {
-    fontFamily: 'Inter-Medium',
     fontSize: 14,
+    fontWeight: '500',
     color: '#3B6FE0',
   },
   financialSummary: {
@@ -827,23 +954,21 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   statValue: {
-    fontFamily: 'Inter-Bold',
     fontSize: 18,
+    fontWeight: 'bold',
     color: '#1F2937',
     marginVertical: 8,
   },
   statLabel: {
-    fontFamily: 'Inter-Regular',
     fontSize: 14,
     color: '#6B7280',
   },
-  // Tab content styles
   tabContent: {
     paddingBottom: 16,
   },
   tabTitle: {
-    fontFamily: 'Inter-Bold',
     fontSize: 20,
+    fontWeight: 'bold',
     color: '#1F2937',
     marginBottom: 16,
   },
@@ -857,8 +982,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   addRecordText: {
-    fontFamily: 'Inter-Medium',
     fontSize: 16,
+    fontWeight: '500',
     color: '#FFFFFF',
     marginLeft: 8,
   },
@@ -886,23 +1011,21 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   maintenanceTitle: {
-    fontFamily: 'Inter-Bold',
     fontSize: 16,
+    fontWeight: 'bold',
     color: '#1F2937',
     marginBottom: 2,
   },
   maintenanceDate: {
-    fontFamily: 'Inter-Regular',
     fontSize: 14,
     color: '#6B7280',
   },
   maintenanceCost: {
-    fontFamily: 'Inter-Bold',
     fontSize: 16,
+    fontWeight: 'bold',
     color: '#1F2937',
   },
   maintenanceDescription: {
-    fontFamily: 'Inter-Regular',
     fontSize: 14,
     color: '#4B5563',
     marginBottom: 12,
@@ -918,12 +1041,10 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   footerText: {
-    fontFamily: 'Inter-Regular',
     fontSize: 14,
     color: '#6B7280',
     marginLeft: 4,
   },
-  // Finance tab styles
   financesSummary: {
     marginBottom: 16,
   },
@@ -942,14 +1063,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   summaryLabel: {
-    fontFamily: 'Inter-Regular',
     fontSize: 14,
     color: '#6B7280',
     marginBottom: 4,
   },
   summaryAmount: {
-    fontFamily: 'Inter-Bold',
     fontSize: 24,
+    fontWeight: 'bold',
     color: '#1F2937',
   },
   financeCard: {
@@ -995,27 +1115,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   financeType: {
-    fontFamily: 'Inter-Bold',
     fontSize: 16,
+    fontWeight: 'bold',
     color: '#1F2937',
     marginBottom: 2,
   },
   financeDate: {
-    fontFamily: 'Inter-Regular',
     fontSize: 14,
     color: '#6B7280',
   },
   financeAmount: {
-    fontFamily: 'Inter-Bold',
     fontSize: 16,
+    fontWeight: 'bold',
     color: '#1F2937',
   },
   financeDescription: {
-    fontFamily: 'Inter-Regular',
     fontSize: 14,
     color: '#4B5563',
   },
-  // Reminder tab styles
   reminderCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -1040,18 +1157,16 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   reminderTitleFull: {
-    fontFamily: 'Inter-Bold',
     fontSize: 16,
+    fontWeight: 'bold',
     color: '#1F2937',
     marginBottom: 2,
   },
   reminderDate: {
-    fontFamily: 'Inter-Regular',
     fontSize: 14,
     color: '#6B7280',
   },
   reminderDescription: {
-    fontFamily: 'Inter-Regular',
     fontSize: 14,
     color: '#4B5563',
     marginBottom: 12,
@@ -1066,25 +1181,23 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   mileageText: {
-    fontFamily: 'Inter-Medium',
     fontSize: 12,
+    fontWeight: '500',
     color: '#4B5563',
     marginLeft: 4,
   },
-  // Empty state
   emptyState: {
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyStateText: {
-    fontFamily: 'Inter-Bold',
     fontSize: 18,
+    fontWeight: 'bold',
     color: '#1F2937',
     marginBottom: 8,
   },
   emptyStateSubtext: {
-    fontFamily: 'Inter-Regular',
     fontSize: 16,
     color: '#6B7280',
     textAlign: 'center',

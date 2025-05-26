@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -20,22 +20,54 @@ import {
 } from 'lucide-react-native';
 import { MaintenanceRecord, Vehicle } from '@/types';
 import { MOCK_MAINTENANCE, MOCK_VEHICLES } from '@/assets/MOCKDATA';
+import { supabase } from '@/lib/supabase';
 
 type Filter = 'all' | 'scheduled' | 'completed';
 
 export default function MaintenanceScreen() {
   const [refreshing, setRefreshing] = useState(false);
-  const [records, setRecords] = useState<MaintenanceRecord[]>(MOCK_MAINTENANCE);
+  const [records, setRecords] = useState<MaintenanceRecord[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [filter, setFilter] = useState<Filter>('all');
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
   const router = useRouter();
 
-  const onRefresh = React.useCallback(() => {
+  // Fetch all maintenance records from Supabase
+  const fetchMaintenanceRecords = async () => {
     setRefreshing(true);
-    // Simulate a refresh
-    setTimeout(() => {
+    try {
+      const { data, error } = await supabase
+        .from('maintenance')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+      setRecords(data as MaintenanceRecord[]);
+    } catch (error) {
+      console.error('Error fetching maintenance records:', error);
+    } finally {
       setRefreshing(false);
-    }, 1000);
+    }
+  };
+
+  // Fetch vehicles from Supabase
+  const fetchVehicles = async () => {
+    try {
+      const { data, error } = await supabase.from('cars').select('*');
+      if (error) throw error;
+      setVehicles(data as Vehicle[]);
+    } catch (error) {
+      console.error('Error fetching vehicles:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchMaintenanceRecords();
+    fetchVehicles();
+  }, []);
+
+  const onRefresh = React.useCallback(() => {
+    fetchMaintenanceRecords();
   }, []);
 
   const handleAddMaintenance = () => {
@@ -65,13 +97,11 @@ export default function MaintenanceScreen() {
       filtered = filtered.filter((record) => record.isDone);
     }
 
-    return filtered.sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
+    return filtered;
   }, [records, filter, selectedVehicle]);
 
   const renderMaintenanceItem = ({ item }: { item: MaintenanceRecord }) => {
-    const vehicle = MOCK_VEHICLES.find((v) => v.id === item.vehicleId);
+    const vehicle = vehicles.find((v) => v.id === item.vehicleId);
     return (
       <TouchableOpacity
         style={styles.recordCard}
@@ -101,17 +131,24 @@ export default function MaintenanceScreen() {
           <View style={styles.detailItem}>
             <Car size={16} color="#6B7280" />
             <Text style={styles.detailText}>
-              {item.mileage.toLocaleString()} mi
+              {item.mileage?.toLocaleString() || 'N/A'} mi
             </Text>
           </View>
-          <View style={styles.detailItem}>
-            <DollarSign size={16} color="#6B7280" />
-            <Text style={styles.detailText}>${item.cost.toFixed(2)}</Text>
-          </View>
+          {item.cost && (
+            <View style={styles.detailItem}>
+              <DollarSign size={16} color="#6B7280" />
+              <Text style={styles.detailText}>${item.cost}</Text>
+            </View>
+          )}
         </View>
         {item.isScheduled && !item.isDone && (
           <View style={styles.scheduledBadge}>
             <Text style={styles.scheduledText}>Scheduled</Text>
+          </View>
+        )}
+        {item.isDone && (
+          <View style={styles.completedBadge}>
+            <Text style={styles.completedText}>Completed</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -175,7 +212,7 @@ export default function MaintenanceScreen() {
             </Text>
           </TouchableOpacity>
 
-          {MOCK_VEHICLES.map((vehicle) => (
+          {vehicles.map((vehicle) => (
             <TouchableOpacity
               key={vehicle.id}
               style={[
@@ -268,6 +305,20 @@ const styles = StyleSheet.create({
   },
   filterButtonActive: {
     backgroundColor: '#EEF2FF',
+  },
+  completedBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  completedText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    color: '#065F46',
   },
   filterText: {
     fontFamily: 'Inter-Medium',

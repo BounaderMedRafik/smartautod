@@ -1,55 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import { useDeleteFinancialRecord } from '@/database/useDeleteFinance';
+import { supabase } from '@/lib/supabase';
+import { FinancialRecord, Vehicle } from '@/types';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  Platform,
-} from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import {
+  AlertTriangle,
   ArrowLeft,
   Calendar,
   Car,
-  DollarSign,
-  Edit2,
-  Trash2,
-  AlertTriangle,
+  FileText,
   Fuel,
   Shield,
-  FileText,
   Tag,
+  Trash2,
+  Wrench,
 } from 'lucide-react-native';
-import { FinancialRecord, Vehicle } from '@/types';
-import { MOCK_FINANCE, MOCK_VEHICLES } from '@/assets/MOCKDATA';
-
-const getIconForType = (type: string) => {
-  switch (type) {
-    case 'fuel':
-      return Fuel;
-    case 'insurance':
-      return Shield;
-    case 'tax':
-      return FileText;
-    default:
-      return Tag;
-  }
-};
-
-const getColorForType = (type: string) => {
-  switch (type) {
-    case 'fuel':
-      return '#F59E0B';
-    case 'insurance':
-      return '#10B981';
-    case 'tax':
-      return '#8B5CF6';
-    default:
-      return '#6B7280';
-  }
-};
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 export default function FinanceDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -57,36 +30,111 @@ export default function FinanceDetailScreen() {
   const [record, setRecord] = useState<FinancialRecord | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { deleteFinancialRecord } = useDeleteFinancialRecord();
 
   useEffect(() => {
-    // Find financial record by id
-    const foundRecord = MOCK_FINANCE.find((f) => f.id === id);
-    if (foundRecord) {
-      setRecord(foundRecord);
-      // Find associated vehicle
-      const foundVehicle = MOCK_VEHICLES.find(
-        (v) => v.id === foundRecord.vehicleId
-      );
-      if (foundVehicle) {
-        setVehicle(foundVehicle);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch financial record
+        const { data: financeData, error: financeError } = await supabase
+          .from('finances')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (financeError) throw financeError;
+        setRecord(financeData);
+
+        // Fetch associated vehicle
+        if (financeData?.vehicleId) {
+          const { data: vehicleData, error: vehicleError } = await supabase
+            .from('cars')
+            .select('*')
+            .eq('id', financeData.vehicleId)
+            .single();
+
+          if (vehicleError) throw vehicleError;
+          setVehicle(vehicleData);
+        }
+      } catch (err) {
+        //@ts-ignore
+        setError(err.message || 'Failed to load data');
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+
+    fetchData();
   }, [id]);
 
-  const handleDelete = () => {
-    // Here you would typically make an API call to delete the record
-    console.log('Deleting record:', id);
-    router.back();
+  const handleDelete = async () => {
+    const success = await deleteFinancialRecord(id as string);
+    if (success) {
+      setShowDeleteConfirm(false);
+    }
   };
 
-  const handleEdit = () => {
-    router.push(`/finance/edit/${id}`);
+  const getIconForType = (type: string) => {
+    switch (type) {
+      case 'fuel':
+        return Fuel;
+      case 'insurance':
+        return Shield;
+      case 'tax':
+        return FileText;
+      case 'maintenance':
+        return Wrench;
+      default:
+        return Tag;
+    }
   };
+
+  const getColorForType = (type: string) => {
+    switch (type) {
+      case 'fuel':
+        return '#F59E0B';
+      case 'insurance':
+        return '#10B981';
+      case 'tax':
+        return '#8B5CF6';
+      case 'maintenance':
+        return '#3B82F6';
+      default:
+        return '#6B7280';
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#3B82F6" />
+        <Text style={styles.loadingText}>Loading expense details...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Error: {error}</Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.retryButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (!record || !vehicle) {
     return (
       <View style={styles.container}>
-        <Text>Loading...</Text>
+        <Text>Record not found</Text>
       </View>
     );
   }
@@ -111,12 +159,6 @@ export default function FinanceDetailScreen() {
           headerRight: () => (
             <View style={styles.headerButtons}>
               <TouchableOpacity
-                onPress={handleEdit}
-                style={styles.headerButton}
-              >
-                <Edit2 size={24} color="#3B6FE0" />
-              </TouchableOpacity>
-              <TouchableOpacity
                 onPress={() => setShowDeleteConfirm(true)}
                 style={styles.headerButton}
               >
@@ -126,20 +168,23 @@ export default function FinanceDetailScreen() {
           ),
         }}
       />
+
       <ScrollView style={styles.container}>
         <View style={styles.content}>
+          {/* Expense Header */}
           <View style={styles.header}>
             <View style={[styles.typeIcon, { backgroundColor: iconColor }]}>
               <IconComponent size={24} color="#FFFFFF" />
             </View>
             <View style={styles.headerInfo}>
-              <Text style={styles.amount}>${record.amount.toFixed(2)}</Text>
+              <Text style={styles.amount}>${record.amount}</Text>
               <Text style={styles.type}>
                 {record.type.charAt(0).toUpperCase() + record.type.slice(1)}
               </Text>
             </View>
           </View>
 
+          {/* Basic Details */}
           <View style={styles.detailsCard}>
             <View style={styles.detailRow}>
               <View style={styles.detailItem}>
@@ -163,6 +208,7 @@ export default function FinanceDetailScreen() {
             </View>
           </View>
 
+          {/* Description */}
           {record.description && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Description</Text>
@@ -170,29 +216,30 @@ export default function FinanceDetailScreen() {
             </View>
           )}
 
-          {record.receipt && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Receipt</Text>
-              <Image
-                source={{ uri: record.receipt }}
-                style={styles.receiptImage}
-                resizeMode="contain"
-              />
+          {/* Additional Info */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Additional Information</Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Created At</Text>
+              <Text style={styles.infoValue}>
+                {new Date(record.date).toLocaleString()}
+              </Text>
             </View>
-          )}
+          </View>
         </View>
       </ScrollView>
 
+      {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalIcon}>
               <AlertTriangle size={32} color="#EF4444" />
             </View>
-            <Text style={styles.modalTitle}>Delete Record?</Text>
+            <Text style={styles.modalTitle}>Delete Expense?</Text>
             <Text style={styles.modalMessage}>
-              This action cannot be undone. Are you sure you want to delete this
-              expense record?
+              This will permanently delete this expense record. This action
+              cannot be undone.
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -220,12 +267,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
-  headerButton: {
-    padding: 8,
+  loadingText: {
+    marginTop: 16,
+    color: '#6B7280',
+    textAlign: 'center',
   },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  errorText: {
+    color: '#EF4444',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: '#3B82F6',
+    padding: 12,
+    borderRadius: 8,
+    alignSelf: 'center',
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   content: {
     padding: 16,
@@ -233,23 +293,12 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    marginBottom: 24,
   },
   typeIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -258,14 +307,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   amount: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 24,
+    fontSize: 28,
+    fontWeight: 'bold',
     color: '#1F2937',
-    marginBottom: 4,
   },
   type: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 16,
+    fontSize: 18,
     color: '#6B7280',
   },
   detailsCard: {
@@ -274,10 +321,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
@@ -289,45 +333,34 @@ const styles = StyleSheet.create({
   detailItem: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginRight: 16,
+    alignItems: 'center',
+    marginBottom: 12,
   },
   detailText: {
     marginLeft: 12,
   },
   detailLabel: {
-    fontFamily: 'Inter-Regular',
     fontSize: 14,
     color: '#6B7280',
-    marginBottom: 4,
   },
   detailValue: {
-    fontFamily: 'Inter-Medium',
     fontSize: 16,
     color: '#1F2937',
+    fontWeight: '500',
   },
   section: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
   sectionTitle: {
-    fontFamily: 'Inter-Bold',
     fontSize: 18,
+    fontWeight: '600',
     color: '#1F2937',
     marginBottom: 12,
   },
   description: {
-    fontFamily: 'Inter-Regular',
     fontSize: 16,
     color: '#4B5563',
     lineHeight: 24,
@@ -336,14 +369,40 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
     borderRadius: 8,
+    marginTop: 8,
+  },
+  viewReceiptButton: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  viewReceiptText: {
+    color: '#3B82F6',
+    fontWeight: '500',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  infoLabel: {
+    color: '#6B7280',
+  },
+  infoValue: {
+    color: '#1F2937',
+    fontWeight: '500',
+  },
+  headerButton: {
+    padding: 8,
+  },
+  headerButtons: {
+    flexDirection: 'row',
   },
   modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
@@ -353,21 +412,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 24,
     width: '100%',
-    maxWidth: 400,
   },
   modalIcon: {
     alignSelf: 'center',
     marginBottom: 16,
   },
   modalTitle: {
-    fontFamily: 'Inter-Bold',
     fontSize: 20,
-    color: '#1F2937',
+    fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 8,
   },
   modalMessage: {
-    fontFamily: 'Inter-Regular',
     fontSize: 16,
     color: '#6B7280',
     textAlign: 'center',
@@ -375,7 +431,6 @@ const styles = StyleSheet.create({
   },
   modalButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
   },
   cancelButton: {
     flex: 1,
@@ -385,10 +440,9 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   cancelButtonText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 16,
     color: '#4B5563',
     textAlign: 'center',
+    fontWeight: '500',
   },
   deleteButton: {
     flex: 1,
@@ -398,9 +452,8 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   deleteButtonText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 16,
     color: '#EF4444',
     textAlign: 'center',
+    fontWeight: '500',
   },
 });
