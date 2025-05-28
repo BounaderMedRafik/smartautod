@@ -1,3 +1,4 @@
+import { useLanguage } from '@/context/LanguageContext';
 import { useAddFinancialRecord } from '@/database/useAddFinancialRecord';
 import { useUserVehicles } from '@/database/useFetchAllCarsById';
 import { Vehicle } from '@/types';
@@ -30,6 +31,8 @@ import {
 
 export default function AddFinanceScreen() {
   const router = useRouter();
+  const { lang } = useLanguage();
+
   const [type, setType] = useState<
     'fuel' | 'insurance' | 'tax' | 'maintenance' | 'other'
   >('fuel');
@@ -47,7 +50,13 @@ export default function AddFinanceScreen() {
 
   const handleSubmit = async () => {
     if (!selectedVehicle || !amount) {
-      setFormError('Please fill in all required fields');
+      setFormError(
+        lang === 'fr'
+          ? 'Veuillez remplir tous les champs obligatoires'
+          : lang === 'ara'
+          ? 'يرجى ملء جميع الحقول المطلوبة'
+          : 'Please fill in all required fields'
+      );
       return;
     }
 
@@ -92,16 +101,38 @@ export default function AddFinanceScreen() {
   );
 
   const typeOptions = [
-    { value: 'fuel', label: 'Fuel', icon: Fuel, color: '#F59E0B' },
-    { value: 'insurance', label: 'Insurance', icon: Shield, color: '#10B981' },
-    { value: 'tax', label: 'Tax', icon: FileText, color: '#8B5CF6' },
+    {
+      value: 'fuel',
+      label: lang === 'fr' ? 'Carburant' : lang === 'ara' ? 'وقود' : 'Fuel',
+      icon: Fuel,
+      color: '#F59E0B',
+    },
+    {
+      value: 'insurance',
+      label:
+        lang === 'fr' ? 'Assurance' : lang === 'ara' ? 'تأمين' : 'Insurance',
+      icon: Shield,
+      color: '#10B981',
+    },
+    {
+      value: 'tax',
+      label: lang === 'fr' ? 'Taxe' : lang === 'ara' ? 'ضريبة' : 'Tax',
+      icon: FileText,
+      color: '#8B5CF6',
+    },
     {
       value: 'maintenance',
-      label: 'Maintenance',
+      label:
+        lang === 'fr' ? 'Entretien' : lang === 'ara' ? 'صيانة' : 'Maintenance',
       icon: Wrench,
       color: '#3B82F6',
     },
-    { value: 'other', label: 'Other', icon: Tag, color: '#6B7280' },
+    {
+      value: 'other',
+      label: lang === 'fr' ? 'Autre' : lang === 'ara' ? 'أخرى' : 'Other',
+      icon: Tag,
+      color: '#6B7280',
+    },
   ];
 
   return (
@@ -109,7 +140,12 @@ export default function AddFinanceScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          headerTitle: 'Add Expense Record',
+          headerTitle:
+            lang === 'fr'
+              ? 'Ajouter une dépense'
+              : lang === 'ara'
+              ? 'إضافة مصروف'
+              : 'Add Expense Record',
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.back()}
@@ -133,7 +169,13 @@ export default function AddFinanceScreen() {
           )}
 
           <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Expense Type</Text>
+            <Text style={styles.sectionTitle}>
+              {lang === 'fr'
+                ? 'Type de dépense'
+                : lang === 'ara'
+                ? 'نوع المصروف'
+                : 'Expense Type'}
+            </Text>
 
             <View style={styles.typeSelector}>
               {typeOptions.map((option) => (
@@ -166,30 +208,62 @@ export default function AddFinanceScreen() {
           </View>
 
           <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Expense Details</Text>
+            <Text style={styles.sectionTitle}>
+              {lang === 'fr'
+                ? 'Détails de la dépense'
+                : lang === 'ara'
+                ? 'تفاصيل المصروف'
+                : 'Expense Details'}
+            </Text>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Amount *</Text>
+              <Text style={styles.label}>
+                {lang === 'fr'
+                  ? 'Montant *'
+                  : lang === 'ara'
+                  ? 'المبلغ *'
+                  : 'Amount *'}
+              </Text>
               <TextInput
                 style={styles.input}
                 value={amount}
                 onChangeText={setAmount}
-                placeholder="e.g., 49.99"
+                placeholder={
+                  lang === 'fr'
+                    ? 'ex. 49.99'
+                    : lang === 'ara'
+                    ? 'مثال: 49.99'
+                    : 'e.g., 49.99'
+                }
                 keyboardType="decimal-pad"
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Vehicle *</Text>
+              <Text style={styles.label}>
+                {lang === 'fr'
+                  ? 'Véhicule *'
+                  : lang === 'ara'
+                  ? 'المركبة *'
+                  : 'Vehicle *'}
+              </Text>
               <TouchableOpacity
                 style={styles.selectButton}
                 onPress={() => setIsVehicleModalVisible(true)}
               >
                 <Text style={styles.selectButtonText}>
                   {selectedVehicle && vehicles
-                    ? `${vehicles.find((v) => v.id === selectedVehicle)?.year} 
-                       ${vehicles.find((v) => v.id === selectedVehicle)?.make} 
-                       ${vehicles.find((v) => v.id === selectedVehicle)?.model}`
+                    ? `${
+                        vehicles.find((v) => v.id === selectedVehicle)?.year
+                      } ${
+                        vehicles.find((v) => v.id === selectedVehicle)?.make
+                      } ${
+                        vehicles.find((v) => v.id === selectedVehicle)?.model
+                      }`
+                    : lang === 'fr'
+                    ? 'Sélectionnez un véhicule'
+                    : lang === 'ara'
+                    ? 'اختر مركبة'
                     : 'Select a vehicle'}
                 </Text>
                 <ChevronDown size={20} color="#6B7280" />
@@ -217,12 +291,24 @@ export default function AddFinanceScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Description</Text>
+              <Text style={styles.label}>
+                {lang === 'fr'
+                  ? 'Description'
+                  : lang === 'ara'
+                  ? 'الوصف'
+                  : 'Description'}
+              </Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={description}
                 onChangeText={setDescription}
-                placeholder="Add any additional details"
+                placeholder={
+                  lang === 'fr'
+                    ? 'Ajoutez des détails supplémentaires'
+                    : lang === 'ara'
+                    ? 'أضف أي تفاصيل إضافية'
+                    : 'Add any additional details'
+                }
                 multiline
                 numberOfLines={4}
               />
@@ -237,7 +323,13 @@ export default function AddFinanceScreen() {
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.submitButtonText}>Save Expense</Text>
+              <Text style={styles.submitButtonText}>
+                {lang === 'fr'
+                  ? 'Enregistrer la dépense'
+                  : lang === 'ara'
+                  ? 'حفظ المصروف'
+                  : 'Save Expense'}
+              </Text>
             )}
           </TouchableOpacity>
         </ScrollView>
@@ -252,11 +344,23 @@ export default function AddFinanceScreen() {
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select Vehicle</Text>
+                <Text style={styles.modalTitle}>
+                  {lang === 'fr'
+                    ? 'Sélectionnez un véhicule'
+                    : lang === 'ara'
+                    ? 'اختر مركبة'
+                    : 'Select Vehicle'}
+                </Text>
                 <TouchableOpacity
                   onPress={() => setIsVehicleModalVisible(false)}
                 >
-                  <Text style={styles.modalCloseText}>Close</Text>
+                  <Text style={styles.modalCloseText}>
+                    {lang === 'fr'
+                      ? 'Fermer'
+                      : lang === 'ara'
+                      ? 'إغلاق'
+                      : 'Close'}
+                  </Text>
                 </TouchableOpacity>
               </View>
 

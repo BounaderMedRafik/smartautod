@@ -1,4 +1,5 @@
 'use client';
+import { useLanguage } from '@/context/LanguageContext';
 import { useDeleteVehicle } from '@/database/useDeleteVehicle';
 import { useFetchCarById } from '@/database/useFetchCarById';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -32,6 +33,7 @@ import {
 
 export default function VehicleDetailScreen() {
   const { id } = useLocalSearchParams();
+  const { lang, setLang } = useLanguage();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
   const [refreshing, setRefreshing] = useState(false);
@@ -49,13 +51,8 @@ export default function VehicleDetailScreen() {
   };
 
   const getLatestMileage = () => {
-    // Get all maintenance mileages
     const maintenanceMileages = maintenance.map((m) => m.mileage);
-
-    // Combine all mileages with current vehicle mileage
     const allMileages = [...maintenanceMileages, vehicle?.mileage];
-
-    // Return the highest mileage
     //@ts-ignore
     return Math.max(...allMileages);
   };
@@ -64,7 +61,13 @@ export default function VehicleDetailScreen() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#3B6FE0" />
-        <Text style={styles.loadingText}>Loading vehicle details...</Text>
+        <Text style={styles.loadingText}>
+          {lang === 'fr'
+            ? 'Chargement des détails du véhicule...'
+            : lang === 'ara'
+            ? 'جار تحميل تفاصيل السيارة...'
+            : 'Loading vehicle details...'}
+        </Text>
       </View>
     );
   }
@@ -73,10 +76,21 @@ export default function VehicleDetailScreen() {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>
-          Error loading vehicle: {error.message}
+          {lang === 'fr'
+            ? 'Erreur lors du chargement du véhicule:'
+            : lang === 'ara'
+            ? 'خطأ في تحميل السيارة:'
+            : 'Error loading vehicle:'}{' '}
+          {error.message}
         </Text>
         <TouchableOpacity style={styles.retryButton} onPress={refetch}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+          <Text style={styles.retryButtonText}>
+            {lang === 'fr'
+              ? 'Réessayer'
+              : lang === 'ara'
+              ? 'إعادة المحاولة'
+              : 'Retry'}
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -85,7 +99,13 @@ export default function VehicleDetailScreen() {
   if (!vehicle) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>Vehicle not found</Text>
+        <Text style={styles.emptyText}>
+          {lang === 'fr'
+            ? 'Véhicule non trouvé'
+            : lang === 'ara'
+            ? 'السيارة غير موجودة'
+            : 'Vehicle not found'}
+        </Text>
       </View>
     );
   }
@@ -93,39 +113,81 @@ export default function VehicleDetailScreen() {
   const renderOverviewTab = () => (
     <>
       <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>Vehicle Information</Text>
+        <Text style={styles.infoTitle}>
+          {lang === 'fr'
+            ? 'Informations sur le véhicule'
+            : lang === 'ara'
+            ? 'معلومات السيارة'
+            : 'Vehicle Information'}
+        </Text>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Make</Text>
+          <Text style={styles.infoLabel}>
+            {lang === 'fr' ? 'Marque' : lang === 'ara' ? 'العلامة' : 'Make'}
+          </Text>
           <Text style={styles.infoValue}>{vehicle.make}</Text>
         </View>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Model</Text>
+          <Text style={styles.infoLabel}>
+            {lang === 'fr' ? 'Modèle' : lang === 'ara' ? 'الموديل' : 'Model'}
+          </Text>
           <Text style={styles.infoValue}>{vehicle.model}</Text>
         </View>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Year</Text>
+          <Text style={styles.infoLabel}>
+            {lang === 'fr' ? 'Année' : lang === 'ara' ? 'السنة' : 'Year'}
+          </Text>
           <Text style={styles.infoValue}>{vehicle.year}</Text>
         </View>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Color</Text>
+          <Text style={styles.infoLabel}>
+            {lang === 'fr' ? 'Couleur' : lang === 'ara' ? 'اللون' : 'Color'}
+          </Text>
           <Text style={styles.infoValue}>{vehicle.color}</Text>
         </View>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>License Plate</Text>
+          <Text style={styles.infoLabel}>
+            {lang === 'fr'
+              ? "Plaque d'immatriculation"
+              : lang === 'ara'
+              ? 'لوحة الترخيص'
+              : 'License Plate'}
+          </Text>
           <Text style={styles.infoValue}>{vehicle.licensePlate}</Text>
         </View>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>VIN</Text>
-          <Text style={styles.infoValue}>{vehicle.vin || 'Not provided'}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Current Kilometrage</Text>
+          <Text style={styles.infoLabel}>
+            {lang === 'fr' ? 'VIN' : lang === 'ara' ? 'رقم الهيكل' : 'VIN'}
+          </Text>
           <Text style={styles.infoValue}>
-            {getLatestMileage().toLocaleString()} klms{' '}
+            {vehicle.vin ||
+              (lang === 'fr'
+                ? 'Non fourni'
+                : lang === 'ara'
+                ? 'غير متوفر'
+                : 'Not provided')}
           </Text>
         </View>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Purchase Date</Text>
+          <Text style={styles.infoLabel}>
+            {lang === 'fr'
+              ? 'Kilométrage actuel'
+              : lang === 'ara'
+              ? 'عدد الكيلومترات الحالي'
+              : 'Current Kilometrage'}
+          </Text>
+          <Text style={styles.infoValue}>
+            {getLatestMileage().toLocaleString()}{' '}
+            {lang === 'fr' ? 'km' : lang === 'ara' ? 'كم' : 'klms'}
+          </Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>
+            {lang === 'fr'
+              ? "Date d'achat"
+              : lang === 'ara'
+              ? 'تاريخ الشراء'
+              : 'Purchase Date'}
+          </Text>
           <Text style={styles.infoValue}>
             {new Date(vehicle.purchaseDate).toLocaleDateString()}
           </Text>
@@ -133,7 +195,13 @@ export default function VehicleDetailScreen() {
       </View>
 
       <View style={styles.upcomingContainer}>
-        <Text style={styles.sectionTitle}>Upcoming Maintenance</Text>
+        <Text style={styles.sectionTitle}>
+          {lang === 'fr'
+            ? 'Maintenance à venir'
+            : lang === 'ara'
+            ? 'الصيانة القادمة'
+            : 'Upcoming Maintenance'}
+        </Text>
         {reminders.length > 0 ? (
           <View style={styles.upcomingCard}>
             {reminders.map((reminder) => (
@@ -144,7 +212,8 @@ export default function VehicleDetailScreen() {
                 <View style={styles.reminderInfo}>
                   <Text style={styles.reminderTitle}>{reminder.title}</Text>
                   <Text style={styles.reminderDue}>
-                    Due: {new Date(reminder.dueDate).toLocaleDateString()}
+                    {lang === 'fr' ? 'Dû:' : lang === 'ara' ? 'مستحق:' : 'Due:'}{' '}
+                    {new Date(reminder.dueDate).toLocaleDateString()}
                   </Text>
                 </View>
                 <ChevronRight size={20} color="#9CA3AF" />
@@ -153,19 +222,37 @@ export default function VehicleDetailScreen() {
           </View>
         ) : (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No upcoming maintenance</Text>
+            <Text style={styles.emptyText}>
+              {lang === 'fr'
+                ? 'Aucune maintenance prévue'
+                : lang === 'ara'
+                ? 'لا توجد صيانة قادمة'
+                : 'No upcoming maintenance'}
+            </Text>
             <TouchableOpacity
               style={styles.addButton}
               onPress={() => router.push('/reminder/add')}
             >
-              <Text style={styles.addButtonText}>Add Reminder</Text>
+              <Text style={styles.addButtonText}>
+                {lang === 'fr'
+                  ? 'Ajouter un rappel'
+                  : lang === 'ara'
+                  ? 'إضافة تذكير'
+                  : 'Add Reminder'}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
       </View>
 
       <View style={styles.recentContainer}>
-        <Text style={styles.sectionTitle}>Recent Records</Text>
+        <Text style={styles.sectionTitle}>
+          {lang === 'fr'
+            ? 'Dossiers récents'
+            : lang === 'ara'
+            ? 'السجلات الحديثة'
+            : 'Recent Records'}
+        </Text>
         {maintenance.length > 0 ? (
           <View style={styles.recentCard}>
             {maintenance.slice(0, 2).map((record) => (
@@ -181,7 +268,13 @@ export default function VehicleDetailScreen() {
                   <Text style={styles.recordTitle}>{record.title}</Text>
                   <Text style={styles.recordDate}>
                     {new Date(record.date).toLocaleDateString()} •
-                    {record.cost ? `DZD • ${record.cost}` : 'No cost'}
+                    {record.cost
+                      ? `DZD • ${record.cost}`
+                      : lang === 'fr'
+                      ? ' • Aucun coût'
+                      : lang === 'ara'
+                      ? ' • بدون تكلفة'
+                      : ' • No cost'}
                   </Text>
                 </View>
                 <ChevronRight size={20} color="#9CA3AF" />
@@ -191,17 +284,35 @@ export default function VehicleDetailScreen() {
               style={styles.viewAllButton}
               onPress={() => setActiveTab('maintenance')}
             >
-              <Text style={styles.viewAllText}>View All Records</Text>
+              <Text style={styles.viewAllText}>
+                {lang === 'fr'
+                  ? 'Voir tous les dossiers'
+                  : lang === 'ara'
+                  ? 'عرض جميع السجلات'
+                  : 'View All Records'}
+              </Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No maintenance records</Text>
+            <Text style={styles.emptyText}>
+              {lang === 'fr'
+                ? 'Aucun dossier de maintenance'
+                : lang === 'ara'
+                ? 'لا توجد سجلات صيانة'
+                : 'No maintenance records'}
+            </Text>
             <TouchableOpacity
               style={styles.addButton}
               onPress={() => router.push('/maintenance/add')}
             >
-              <Text style={styles.addButtonText}>Add Record</Text>
+              <Text style={styles.addButtonText}>
+                {lang === 'fr'
+                  ? 'Ajouter un dossier'
+                  : lang === 'ara'
+                  ? 'إضافة سجل'
+                  : 'Add Record'}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -211,14 +322,26 @@ export default function VehicleDetailScreen() {
 
   const renderMaintenanceTab = () => (
     <View style={styles.tabContent}>
-      <Text style={styles.tabTitle}>Maintenance Records</Text>
+      <Text style={styles.tabTitle}>
+        {lang === 'fr'
+          ? 'Dossiers de maintenance'
+          : lang === 'ara'
+          ? 'سجلات الصيانة'
+          : 'Maintenance Records'}
+      </Text>
 
       <TouchableOpacity
         style={styles.addRecordButton}
         onPress={() => router.push('/maintenance/add')}
       >
         <PlusCircle size={20} color="#FFFFFF" />
-        <Text style={styles.addRecordText}>Add Record</Text>
+        <Text style={styles.addRecordText}>
+          {lang === 'fr'
+            ? 'Ajouter un dossier'
+            : lang === 'ara'
+            ? 'إضافة سجل'
+            : 'Add Record'}
+        </Text>
       </TouchableOpacity>
 
       {maintenance.length > 0 ? (
@@ -237,7 +360,13 @@ export default function VehicleDetailScreen() {
                 </Text>
               </View>
               <Text style={styles.maintenanceCost}>
-                {record.cost ? `DZD • ${record.cost}` : 'No cost'}
+                {record.cost
+                  ? `DZD • ${record.cost}`
+                  : lang === 'fr'
+                  ? 'Aucun coût'
+                  : lang === 'ara'
+                  ? 'بدون تكلفة'
+                  : 'No cost'}
               </Text>
             </View>
             {record.description && (
@@ -249,7 +378,8 @@ export default function VehicleDetailScreen() {
               <View style={styles.footerItem}>
                 <Car size={16} color="#6B7280" />
                 <Text style={styles.footerText}>
-                  {record.mileage.toLocaleString()} miles
+                  {record.mileage.toLocaleString()}{' '}
+                  {lang === 'fr' ? 'km' : lang === 'ara' ? 'كم' : 'miles'}
                 </Text>
               </View>
               {record.location && (
@@ -263,9 +393,19 @@ export default function VehicleDetailScreen() {
         ))
       ) : (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyStateText}>No maintenance records yet</Text>
+          <Text style={styles.emptyStateText}>
+            {lang === 'fr'
+              ? "Aucun dossier de maintenance pour l'instant"
+              : lang === 'ara'
+              ? 'لا توجد سجلات صيانة حتى الآن'
+              : 'No maintenance records yet'}
+          </Text>
           <Text style={styles.emptyStateSubtext}>
-            Add your first maintenance record to start tracking
+            {lang === 'fr'
+              ? 'Ajoutez votre premier dossier de maintenance pour commencer le suivi'
+              : lang === 'ara'
+              ? 'أضف سجل الصيانة الأول لبدء التتبع'
+              : 'Add your first maintenance record to start tracking'}
           </Text>
         </View>
       )}
@@ -274,21 +414,39 @@ export default function VehicleDetailScreen() {
 
   const renderFinancesTab = () => (
     <View style={styles.tabContent}>
-      <Text style={styles.tabTitle}>Financial Records</Text>
+      <Text style={styles.tabTitle}>
+        {lang === 'fr'
+          ? 'Dossiers financiers'
+          : lang === 'ara'
+          ? 'السجلات المالية'
+          : 'Financial Records'}
+      </Text>
 
       <TouchableOpacity
         style={styles.addRecordButton}
         onPress={() => router.push('/finance/add')}
       >
         <PlusCircle size={20} color="#FFFFFF" />
-        <Text style={styles.addRecordText}>Add Expense</Text>
+        <Text style={styles.addRecordText}>
+          {lang === 'fr'
+            ? 'Ajouter une dépense'
+            : lang === 'ara'
+            ? 'إضافة مصروف'
+            : 'Add Expense'}
+        </Text>
       </TouchableOpacity>
 
       {finances.length > 0 ? (
         <>
           <View style={styles.financesSummary}>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Total Expenses</Text>
+              <Text style={styles.summaryLabel}>
+                {lang === 'fr'
+                  ? 'Dépenses totales'
+                  : lang === 'ara'
+                  ? 'إجمالي المصروفات'
+                  : 'Total Expenses'}
+              </Text>
               <Text style={styles.summaryAmount}>
                 DZD • {finances.reduce((sum, f) => sum + Number(f.amount), 0)}
               </Text>
@@ -321,7 +479,29 @@ export default function VehicleDetailScreen() {
                 )}
                 <View style={styles.financeInfo}>
                   <Text style={styles.financeType}>
-                    {record.type.charAt(0).toUpperCase() + record.type.slice(1)}
+                    {record.type === 'fuel'
+                      ? lang === 'fr'
+                        ? 'Carburant'
+                        : lang === 'ara'
+                        ? 'وقود'
+                        : 'Fuel'
+                      : record.type === 'insurance'
+                      ? lang === 'fr'
+                        ? 'Assurance'
+                        : lang === 'ara'
+                        ? 'تأمين'
+                        : 'Insurance'
+                      : record.type === 'tax'
+                      ? lang === 'fr'
+                        ? 'Taxe'
+                        : lang === 'ara'
+                        ? 'ضريبة'
+                        : 'Tax'
+                      : lang === 'fr'
+                      ? 'Autre'
+                      : lang === 'ara'
+                      ? 'أخرى'
+                      : 'Other'}
                   </Text>
                   <Text style={styles.financeDate}>
                     {new Date(record.date).toLocaleDateString()}
@@ -341,9 +521,19 @@ export default function VehicleDetailScreen() {
         </>
       ) : (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyStateText}>No financial records yet</Text>
+          <Text style={styles.emptyStateText}>
+            {lang === 'fr'
+              ? "Aucun dossier financier pour l'instant"
+              : lang === 'ara'
+              ? 'لا توجد سجلات مالية حتى الآن'
+              : 'No financial records yet'}
+          </Text>
           <Text style={styles.emptyStateSubtext}>
-            Add your first expense to start tracking your vehicle costs
+            {lang === 'fr'
+              ? 'Ajoutez votre première dépense pour commencer le suivi des coûts de votre véhicule'
+              : lang === 'ara'
+              ? 'أضف أول مصروف لبدء تتبع تكاليف سيارتك'
+              : 'Add your first expense to start tracking your vehicle costs'}
           </Text>
         </View>
       )}
@@ -352,14 +542,26 @@ export default function VehicleDetailScreen() {
 
   const renderRemindersTab = () => (
     <View style={styles.tabContent}>
-      <Text style={styles.tabTitle}>Service Reminders</Text>
+      <Text style={styles.tabTitle}>
+        {lang === 'fr'
+          ? 'Rappels de service'
+          : lang === 'ara'
+          ? 'تذكيرات الخدمة'
+          : 'Service Reminders'}
+      </Text>
 
       <TouchableOpacity
         style={styles.addRecordButton}
         onPress={() => router.push('/reminder/add')}
       >
         <PlusCircle size={20} color="#FFFFFF" />
-        <Text style={styles.addRecordText}>Add Reminder</Text>
+        <Text style={styles.addRecordText}>
+          {lang === 'fr'
+            ? 'Ajouter un rappel'
+            : lang === 'ara'
+            ? 'إضافة تذكير'
+            : 'Add Reminder'}
+        </Text>
       </TouchableOpacity>
 
       {reminders.length > 0 ? (
@@ -374,7 +576,8 @@ export default function VehicleDetailScreen() {
               <View style={styles.reminderInfoFull}>
                 <Text style={styles.reminderTitleFull}>{reminder.title}</Text>
                 <Text style={styles.reminderDate}>
-                  Due: {new Date(reminder.dueDate).toLocaleDateString()}
+                  {lang === 'fr' ? 'Dû:' : lang === 'ara' ? 'مستحق:' : 'Due:'}{' '}
+                  {new Date(reminder.dueDate).toLocaleDateString()}
                 </Text>
               </View>
               <ChevronRight size={20} color="#9CA3AF" />
@@ -388,7 +591,8 @@ export default function VehicleDetailScreen() {
               <View style={styles.mileageBadge}>
                 <Car size={14} color="#4B5563" />
                 <Text style={styles.mileageText}>
-                  {reminder.dueMileage.toLocaleString()} miles
+                  {reminder.dueMileage.toLocaleString()}{' '}
+                  {lang === 'fr' ? 'km' : lang === 'ara' ? 'كم' : 'miles'}
                 </Text>
               </View>
             )}
@@ -396,9 +600,19 @@ export default function VehicleDetailScreen() {
         ))
       ) : (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyStateText}>No service reminders yet</Text>
+          <Text style={styles.emptyStateText}>
+            {lang === 'fr'
+              ? "Aucun rappel de service pour l'instant"
+              : lang === 'ara'
+              ? 'لا توجد تذكيرات خدمة حتى الآن'
+              : 'No service reminders yet'}
+          </Text>
           <Text style={styles.emptyStateSubtext}>
-            Add reminders to get notified about upcoming services
+            {lang === 'fr'
+              ? 'Ajoutez des rappels pour être notifié des prochains services'
+              : lang === 'ara'
+              ? 'أضف تذكيرات للحصول على إشعارات حول الخدمات القادمة'
+              : 'Add reminders to get notified about upcoming services'}
           </Text>
         </View>
       )}
@@ -469,7 +683,11 @@ export default function VehicleDetailScreen() {
                   activeTab === 'overview' && styles.activeTabText,
                 ]}
               >
-                Overview
+                {lang === 'fr'
+                  ? 'Aperçu'
+                  : lang === 'ara'
+                  ? 'نظرة عامة'
+                  : 'Overview'}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -485,7 +703,11 @@ export default function VehicleDetailScreen() {
                   activeTab === 'maintenance' && styles.activeTabText,
                 ]}
               >
-                Maintenance
+                {lang === 'fr'
+                  ? 'Maintenance'
+                  : lang === 'ara'
+                  ? 'الصيانة'
+                  : 'Maintenance'}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -498,7 +720,11 @@ export default function VehicleDetailScreen() {
                   activeTab === 'finances' && styles.activeTabText,
                 ]}
               >
-                Finances
+                {lang === 'fr'
+                  ? 'Finances'
+                  : lang === 'ara'
+                  ? 'المالية'
+                  : 'Finances'}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -514,7 +740,11 @@ export default function VehicleDetailScreen() {
                   activeTab === 'reminders' && styles.activeTabText,
                 ]}
               >
-                Reminders
+                {lang === 'fr'
+                  ? 'Rappels'
+                  : lang === 'ara'
+                  ? 'التذكيرات'
+                  : 'Reminders'}
               </Text>
             </TouchableOpacity>
           </ScrollView>
@@ -526,13 +756,24 @@ export default function VehicleDetailScreen() {
           {activeTab === 'finances' && renderFinancesTab()}
           {activeTab === 'reminders' && renderRemindersTab()}
         </View>
+
         {showDeleteConfirm && (
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <AlertTriangle size={32} color="#EF4444" />
-              <Text style={styles.modalTitle}>Delete Vehicle?</Text>
+              <Text style={styles.modalTitle}>
+                {lang === 'fr'
+                  ? 'Supprimer le véhicule?'
+                  : lang === 'ara'
+                  ? 'حذف السيارة؟'
+                  : 'Delete Vehicle?'}
+              </Text>
               <Text style={styles.modalMessage}>
-                This will permanently delete the vehicle and all its records.
+                {lang === 'fr'
+                  ? 'Cela supprimera définitivement le véhicule et tous ses enregistrements.'
+                  : lang === 'ara'
+                  ? 'سيؤدي هذا إلى حذف السيارة وجميع سجلاتها بشكل دائم.'
+                  : 'This will permanently delete the vehicle and all its records.'}
               </Text>
               <Text style={styles.modalMessage}>{DeleteError}</Text>
 
@@ -543,7 +784,13 @@ export default function VehicleDetailScreen() {
                   style={styles.cancelButton}
                   onPress={() => setShowDeleteConfirm(false)}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={styles.cancelButtonText}>
+                    {lang === 'fr'
+                      ? 'Annuler'
+                      : lang === 'ara'
+                      ? 'إلغاء'
+                      : 'Cancel'}
+                  </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -552,7 +799,17 @@ export default function VehicleDetailScreen() {
                   disabled={isDeleting}
                 >
                   <Text style={styles.deleteButtonText}>
-                    {isDeleting ? 'Deleting...' : 'Delete'}
+                    {isDeleting
+                      ? lang === 'fr'
+                        ? 'Suppression...'
+                        : lang === 'ara'
+                        ? 'جاري الحذف...'
+                        : 'Deleting...'
+                      : lang === 'fr'
+                      ? 'Supprimer'
+                      : lang === 'ara'
+                      ? 'حذف'
+                      : 'Delete'}
                   </Text>
                 </TouchableOpacity>
               </View>

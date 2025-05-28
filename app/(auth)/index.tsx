@@ -16,17 +16,25 @@ import { Car, Lock, Mail } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
 import { loginUser } from '@/database/useLoginUser';
 import * as SecureStore from 'expo-secure-store'; // optional: for storing user data securely
-
+import { useLanguage } from '@/context/LanguageContext';
 export default function LoginScreen() {
+  const { lang } = useLanguage();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter(); // assuming you're using router navigation
+  const router = useRouter();
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setError('Please fill in all fields');
+      setError(
+        lang === 'fr'
+          ? 'Veuillez remplir tous les champs'
+          : lang === 'ara'
+          ? 'يرجى ملء جميع الحقول'
+          : 'Please fill in all fields'
+      );
       return;
     }
 
@@ -36,10 +44,8 @@ export default function LoginScreen() {
     try {
       const user = await loginUser({ email, password });
 
-      // Optionally store user in SecureStore
       await SecureStore.setItemAsync('user', JSON.stringify(user));
 
-      // Navigate to profile or main screen
       router.replace({
         //@ts-ignore
         pathname: '(app)',
@@ -47,13 +53,20 @@ export default function LoginScreen() {
         params: { user },
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to login');
+      setError(
+        err instanceof Error
+          ? err.message
+          : lang === 'fr'
+          ? 'Échec de la connexion'
+          : lang === 'ara'
+          ? 'فشل تسجيل الدخول'
+          : 'Failed to login'
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  // for demo account
   const handleQuickLogin = async () => {
     const demoEmail = 'user@example.com';
     const demoPassword = 'password123';
@@ -77,7 +90,15 @@ export default function LoginScreen() {
         params: { user },
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to login');
+      setError(
+        err instanceof Error
+          ? err.message
+          : lang === 'fr'
+          ? 'Échec de la connexion'
+          : lang === 'ara'
+          ? 'فشل تسجيل الدخول'
+          : 'Failed to login'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -93,14 +114,24 @@ export default function LoginScreen() {
           <View style={styles.logoContainer}>
             <Car size={40} color="#3B6FE0" />
           </View>
-          <Text style={styles.appName}>CarKeeper</Text>
+          <Text style={styles.appName}>SmartAuto</Text>
           <Text style={styles.tagline}>
-            Keeping your vehicles in perfect condition
+            {lang === 'fr'
+              ? 'Gardez vos véhicules en parfait état'
+              : lang === 'ara'
+              ? 'الحفاظ على مركباتك في حالة مثالية'
+              : 'Keeping your vehicles in perfect condition'}
           </Text>
         </View>
 
         <View style={styles.formContainer}>
-          <Text style={styles.title}>Sign In</Text>
+          <Text style={styles.title}>
+            {lang === 'fr'
+              ? 'Se connecter'
+              : lang === 'ara'
+              ? 'تسجيل الدخول'
+              : 'Sign In'}
+          </Text>
 
           {error && (
             <View style={styles.errorContainer}>
@@ -112,7 +143,13 @@ export default function LoginScreen() {
             <Mail size={20} color="#6B7280" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Email"
+              placeholder={
+                lang === 'fr'
+                  ? 'Email'
+                  : lang === 'ara'
+                  ? 'البريد الإلكتروني'
+                  : 'Email'
+              }
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -124,7 +161,13 @@ export default function LoginScreen() {
             <Lock size={20} color="#6B7280" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Password"
+              placeholder={
+                lang === 'fr'
+                  ? 'Mot de passe'
+                  : lang === 'ara'
+                  ? 'كلمة المرور'
+                  : 'Password'
+              }
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -139,30 +182,47 @@ export default function LoginScreen() {
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.loginButtonText}>Sign In</Text>
+              <Text style={styles.loginButtonText}>
+                {lang === 'fr'
+                  ? 'Se connecter'
+                  : lang === 'ara'
+                  ? 'تسجيل الدخول'
+                  : 'Sign In'}
+              </Text>
             )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.demoButton}
-            onPress={handleQuickLogin}
-          >
-            <Text style={styles.demoButtonText}>Try Demo Account</Text>
           </TouchableOpacity>
 
           <View style={styles.links}>
             <Link href="/(auth)/forgot-password" asChild>
               <TouchableOpacity>
-                <Text style={styles.forgotPassword}>Forgot Password?</Text>
+                <Text style={styles.forgotPassword}>
+                  {lang === 'fr'
+                    ? 'Mot de passe oublié?'
+                    : lang === 'ara'
+                    ? 'نسيت كلمة المرور؟'
+                    : 'Forgot Password?'}
+                </Text>
               </TouchableOpacity>
             </Link>
           </View>
 
           <View style={styles.signupContainer}>
-            <Text style={styles.signupText}>Don't have an account? </Text>
+            <Text style={styles.signupText}>
+              {lang === 'fr'
+                ? "Vous n'avez pas de compte? "
+                : lang === 'ara'
+                ? 'ليس لديك حساب؟ '
+                : "Don't have an account? "}
+            </Text>
             <Link href="/(auth)/signup" asChild>
               <TouchableOpacity>
-                <Text style={styles.signupLink}>Sign Up</Text>
+                <Text style={styles.signupLink}>
+                  {lang === 'fr'
+                    ? "S'inscrire"
+                    : lang === 'ara'
+                    ? 'إنشاء حساب'
+                    : 'Sign Up'}
+                </Text>
               </TouchableOpacity>
             </Link>
           </View>

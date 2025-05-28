@@ -31,9 +31,12 @@ import { useAddMaintenance } from '@/database/useAddMentenance';
 import { useUserVehicles } from '@/database/useFetchAllCarsById';
 import { Vehicle } from '@/types';
 import { useStoredUser } from '@/hooks/useStoredData';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function AddMaintenanceScreen() {
   const router = useRouter();
+  const { lang } = useLanguage();
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState<string>('');
@@ -50,7 +53,13 @@ export default function AddMaintenanceScreen() {
 
   const handleSubmit = async () => {
     if (!title || !selectedVehicle || !date || !mileage || !cost) {
-      setFormError('Please fill in all required fields');
+      setFormError(
+        lang === 'fr'
+          ? 'Veuillez remplir tous les champs obligatoires'
+          : lang === 'ara'
+          ? 'يرجى ملء جميع الحقول المطلوبة'
+          : 'Please fill in all required fields'
+      );
       return;
     }
 
@@ -103,7 +112,12 @@ export default function AddMaintenanceScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          headerTitle: 'Add Maintenance Record',
+          headerTitle:
+            lang === 'fr'
+              ? 'Ajouter un entretien'
+              : lang === 'ara'
+              ? 'إضافة سجل صيانة'
+              : 'Add Maintenance Record',
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.back()}
@@ -127,32 +141,68 @@ export default function AddMaintenanceScreen() {
           )}
 
           <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Service Details</Text>
+            <Text style={styles.sectionTitle}>
+              {lang === 'fr'
+                ? 'Détails du service'
+                : lang === 'ara'
+                ? 'تفاصيل الخدمة'
+                : 'Service Details'}
+            </Text>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Title *</Text>
+              <Text style={styles.label}>
+                {lang === 'fr'
+                  ? 'Titre *'
+                  : lang === 'ara'
+                  ? 'العنوان *'
+                  : 'Title *'}
+              </Text>
               <TextInput
                 style={styles.input}
                 value={title}
                 onChangeText={setTitle}
-                placeholder="e.g., Oil Change"
+                placeholder={
+                  lang === 'fr'
+                    ? "ex. Changement d'huile"
+                    : lang === 'ara'
+                    ? 'مثال: تغيير الزيت'
+                    : 'e.g., Oil Change'
+                }
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Description</Text>
+              <Text style={styles.label}>
+                {lang === 'fr'
+                  ? 'Description'
+                  : lang === 'ara'
+                  ? 'الوصف'
+                  : 'Description'}
+              </Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={description}
                 onChangeText={setDescription}
-                placeholder="Add any additional details"
+                placeholder={
+                  lang === 'fr'
+                    ? 'Ajouter des détails supplémentaires'
+                    : lang === 'ara'
+                    ? 'أضف أي تفاصيل إضافية'
+                    : 'Add any additional details'
+                }
                 multiline
                 numberOfLines={4}
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Vehicle *</Text>
+              <Text style={styles.label}>
+                {lang === 'fr'
+                  ? 'Véhicule *'
+                  : lang === 'ara'
+                  ? 'المركبة *'
+                  : 'Vehicle *'}
+              </Text>
               <TouchableOpacity
                 style={styles.selectButton}
                 onPress={() => setIsVehicleModalVisible(true)}
@@ -162,6 +212,10 @@ export default function AddMaintenanceScreen() {
                     ? `${vehicles.find((v) => v.id === selectedVehicle)?.year} 
                        ${vehicles.find((v) => v.id === selectedVehicle)?.make} 
                        ${vehicles.find((v) => v.id === selectedVehicle)?.model}`
+                    : lang === 'fr'
+                    ? 'Sélectionnez un véhicule'
+                    : lang === 'ara'
+                    ? 'اختر مركبة'
                     : 'Select a vehicle'}
                 </Text>
                 <ChevronDown size={20} color="#6B7280" />
@@ -170,7 +224,13 @@ export default function AddMaintenanceScreen() {
           </View>
 
           <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Service Information</Text>
+            <Text style={styles.sectionTitle}>
+              {lang === 'fr'
+                ? 'Informations sur le service'
+                : lang === 'ara'
+                ? 'معلومات الخدمة'
+                : 'Service Information'}
+            </Text>
 
             <TouchableOpacity
               style={styles.datePickerButton}
@@ -193,34 +253,70 @@ export default function AddMaintenanceScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Kilometrage *</Text>
+              <Text style={styles.label}>
+                {lang === 'fr'
+                  ? 'Kilométrage *'
+                  : lang === 'ara'
+                  ? 'المسافة المقطوعة *'
+                  : 'Mileage *'}
+              </Text>
               <TextInput
                 style={styles.input}
                 value={mileage}
                 onChangeText={setMileage}
-                placeholder="e.g., 50000klm"
+                placeholder={
+                  lang === 'fr'
+                    ? 'ex. 50000 km'
+                    : lang === 'ara'
+                    ? 'مثال: 50000 كم'
+                    : 'e.g., 50000 km'
+                }
                 keyboardType="numeric"
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Cost *</Text>
+              <Text style={styles.label}>
+                {lang === 'fr'
+                  ? 'Coût *'
+                  : lang === 'ara'
+                  ? 'التكلفة *'
+                  : 'Cost *'}
+              </Text>
               <TextInput
                 style={styles.input}
                 value={cost}
                 onChangeText={setCost}
-                placeholder="e.g., 500dzd"
+                placeholder={
+                  lang === 'fr'
+                    ? 'ex. 500 DZD'
+                    : lang === 'ara'
+                    ? 'مثال: 500 دينار جزائري'
+                    : 'e.g., 500 DZD'
+                }
                 keyboardType="decimal-pad"
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Location</Text>
+              <Text style={styles.label}>
+                {lang === 'fr'
+                  ? 'Lieu'
+                  : lang === 'ara'
+                  ? 'الموقع'
+                  : 'Location'}
+              </Text>
               <TextInput
                 style={styles.input}
                 value={location}
                 onChangeText={setLocation}
-                placeholder="e.g., Quick Lube Service"
+                placeholder={
+                  lang === 'fr'
+                    ? 'ex. Service rapide'
+                    : lang === 'ara'
+                    ? 'مثال: خدمة سريعة'
+                    : 'e.g., Quick Lube Service'
+                }
               />
             </View>
           </View>
@@ -233,7 +329,13 @@ export default function AddMaintenanceScreen() {
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.submitButtonText}>Save Record</Text>
+              <Text style={styles.submitButtonText}>
+                {lang === 'fr'
+                  ? 'Enregistrer'
+                  : lang === 'ara'
+                  ? 'حفظ'
+                  : 'Save Record'}
+              </Text>
             )}
           </TouchableOpacity>
         </ScrollView>
@@ -248,11 +350,23 @@ export default function AddMaintenanceScreen() {
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select Vehicle</Text>
+                <Text style={styles.modalTitle}>
+                  {lang === 'fr'
+                    ? 'Sélectionner un véhicule'
+                    : lang === 'ara'
+                    ? 'اختر مركبة'
+                    : 'Select Vehicle'}
+                </Text>
                 <TouchableOpacity
                   onPress={() => setIsVehicleModalVisible(false)}
                 >
-                  <Text style={styles.modalCloseText}>Close</Text>
+                  <Text style={styles.modalCloseText}>
+                    {lang === 'fr'
+                      ? 'Fermer'
+                      : lang === 'ara'
+                      ? 'إغلاق'
+                      : 'Close'}
+                  </Text>
                 </TouchableOpacity>
               </View>
 

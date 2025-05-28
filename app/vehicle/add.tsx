@@ -1,3 +1,4 @@
+import { useLanguage } from '@/context/LanguageContext';
 import { useAddVehicle } from '@/database/useAddVehicle';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
@@ -23,6 +24,7 @@ const YEARS = Array.from({ length: 30 }, (_, i) => CURRENT_YEAR - i);
 
 export default function AddVehicleScreen() {
   const router = useRouter();
+  const { lang } = useLanguage();
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
   const [year, setYear] = useState(CURRENT_YEAR.toString());
@@ -44,12 +46,24 @@ export default function AddVehicleScreen() {
 
   const handleSubmit = async () => {
     if (!make || !model || !year || !licensePlate || !mileage) {
-      setError('Please fill in all required fields');
+      setError(
+        lang === 'fr'
+          ? 'Veuillez remplir tous les champs obligatoires'
+          : lang === 'ara'
+          ? 'يرجى ملء جميع الحقول المطلوبة'
+          : 'Please fill in all required fields'
+      );
       return;
     }
 
     if (userLoading) {
-      setError('User data is still loading, please wait.');
+      setError(
+        lang === 'fr'
+          ? 'Les données utilisateur sont en cours de chargement, veuillez patienter'
+          : lang === 'ara'
+          ? 'بيانات المستخدم قيد التحميل، يرجى الانتظار'
+          : 'User data is still loading, please wait'
+      );
       return;
     }
 
@@ -71,11 +85,25 @@ export default function AddVehicleScreen() {
       if (success) {
         router.back();
       } else {
-        setError(addVehicleError || 'Failed to save vehicle');
+        setError(
+          addVehicleError || lang === 'fr'
+            ? "Échec de l'enregistrement du véhicule"
+            : lang === 'ara'
+            ? 'فشل حفظ السيارة'
+            : 'Failed to save vehicle'
+        );
       }
     } catch (e) {
       console.error('Submission error:', e);
-      setError(e instanceof Error ? e.message : 'Failed to save vehicle');
+      setError(
+        e instanceof Error
+          ? e.message
+          : lang === 'fr'
+          ? "Échec de l'enregistrement du véhicule"
+          : lang === 'ara'
+          ? 'فشل حفظ السيارة'
+          : 'Failed to save vehicle'
+      );
     }
   };
 
@@ -93,8 +121,16 @@ export default function AddVehicleScreen() {
 
       if (permissionResult.granted === false) {
         Alert.alert(
-          'Permission required',
-          'Permission to access camera roll is required!'
+          lang === 'fr'
+            ? 'Autorisation requise'
+            : lang === 'ara'
+            ? 'الإذن مطلوب'
+            : 'Permission required',
+          lang === 'fr'
+            ? "L'accès à la galerie est nécessaire!"
+            : lang === 'ara'
+            ? 'مطلوب إذن للوصول إلى معرض الصور!'
+            : 'Permission to access camera roll is required!'
         );
         return;
       }
@@ -111,7 +147,13 @@ export default function AddVehicleScreen() {
       }
     } catch (error) {
       console.error('Image picker error:', error);
-      setError('Failed to select image');
+      setError(
+        lang === 'fr'
+          ? "Échec de la sélection de l'image"
+          : lang === 'ara'
+          ? 'فشل اختيار الصورة'
+          : 'Failed to select image'
+      );
     }
   };
 
@@ -120,7 +162,12 @@ export default function AddVehicleScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          headerTitle: 'Add Vehicle',
+          headerTitle:
+            lang === 'fr'
+              ? 'Ajouter un véhicule'
+              : lang === 'ara'
+              ? 'إضافة سيارة'
+              : 'Add Vehicle',
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.back()}
@@ -154,7 +201,13 @@ export default function AddVehicleScreen() {
                   style={styles.changeImageButton}
                   onPress={handleAddImage}
                 >
-                  <Text style={styles.changeImageText}>Change Photo</Text>
+                  <Text style={styles.changeImageText}>
+                    {lang === 'fr'
+                      ? 'Changer la photo'
+                      : lang === 'ara'
+                      ? 'تغيير الصورة'
+                      : 'Change Photo'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -163,36 +216,78 @@ export default function AddVehicleScreen() {
                 onPress={handleAddImage}
               >
                 <Upload size={24} color="#3B6FE0" />
-                <Text style={styles.uploadButtonText}>Add Vehicle Photo</Text>
+                <Text style={styles.uploadButtonText}>
+                  {lang === 'fr'
+                    ? 'Ajouter une photo'
+                    : lang === 'ara'
+                    ? 'إضافة صورة السيارة'
+                    : 'Add Vehicle Photo'}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
 
           <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Vehicle Information</Text>
+            <Text style={styles.sectionTitle}>
+              {lang === 'fr'
+                ? 'Informations du véhicule'
+                : lang === 'ara'
+                ? 'معلومات السيارة'
+                : 'Vehicle Information'}
+            </Text>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Make *</Text>
+              <Text style={styles.label}>
+                {lang === 'fr'
+                  ? 'Marque *'
+                  : lang === 'ara'
+                  ? 'العلامة *'
+                  : 'Make *'}
+              </Text>
               <TextInput
                 style={styles.input}
                 value={make}
                 onChangeText={setMake}
-                placeholder="e.g., Toyota"
+                placeholder={
+                  lang === 'fr'
+                    ? 'ex. Toyota'
+                    : lang === 'ara'
+                    ? 'مثال: تويوتا'
+                    : 'e.g., Toyota'
+                }
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Model *</Text>
+              <Text style={styles.label}>
+                {lang === 'fr'
+                  ? 'Modèle *'
+                  : lang === 'ara'
+                  ? 'الموديل *'
+                  : 'Model *'}
+              </Text>
               <TextInput
                 style={styles.input}
                 value={model}
                 onChangeText={setModel}
-                placeholder="e.g., Camry"
+                placeholder={
+                  lang === 'fr'
+                    ? 'ex. Camry'
+                    : lang === 'ara'
+                    ? 'مثال: كامري'
+                    : 'e.g., Camry'
+                }
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Year *</Text>
+              <Text style={styles.label}>
+                {lang === 'fr'
+                  ? 'Année *'
+                  : lang === 'ara'
+                  ? 'السنة *'
+                  : 'Year *'}
+              </Text>
               <TextInput
                 style={styles.input}
                 value={year}
@@ -203,58 +298,120 @@ export default function AddVehicleScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Color</Text>
+              <Text style={styles.label}>
+                {lang === 'fr' ? 'Couleur' : lang === 'ara' ? 'اللون' : 'Color'}
+              </Text>
               <TextInput
                 style={styles.input}
                 value={color}
                 onChangeText={setColor}
-                placeholder="e.g., Silver"
+                placeholder={
+                  lang === 'fr'
+                    ? 'ex. Argent'
+                    : lang === 'ara'
+                    ? 'مثال: فضي'
+                    : 'e.g., Silver'
+                }
               />
             </View>
           </View>
 
           <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Registration Details</Text>
+            <Text style={styles.sectionTitle}>
+              {lang === 'fr'
+                ? "Détails d'immatriculation"
+                : lang === 'ara'
+                ? 'تفاصيل التسجيل'
+                : 'Registration Details'}
+            </Text>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>License Plate *</Text>
+              <Text style={styles.label}>
+                {lang === 'fr'
+                  ? "Plaque d'immatriculation *"
+                  : lang === 'ara'
+                  ? 'لوحة الترخيص *'
+                  : 'License Plate *'}
+              </Text>
               <TextInput
                 style={styles.input}
                 value={licensePlate}
                 onChangeText={setLicensePlate}
-                placeholder="e.g., ABC-1234"
+                placeholder={
+                  lang === 'fr'
+                    ? 'ex. ABC-1234'
+                    : lang === 'ara'
+                    ? 'مثال: ABC-1234'
+                    : 'e.g., ABC-1234'
+                }
                 autoCapitalize="characters"
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>VIN (Optional)</Text>
+              <Text style={styles.label}>
+                {lang === 'fr'
+                  ? 'VIN (Optionnel)'
+                  : lang === 'ara'
+                  ? 'رقم الهيكل (اختياري)'
+                  : 'VIN (Optional)'}
+              </Text>
               <TextInput
                 style={styles.input}
                 value={vin}
                 onChangeText={setVin}
-                placeholder="Vehicle Identification Number"
+                placeholder={
+                  lang === 'fr'
+                    ? "Numéro d'identification du véhicule"
+                    : lang === 'ara'
+                    ? 'رقم تعريف السيارة'
+                    : 'Vehicle Identification Number'
+                }
                 autoCapitalize="characters"
               />
             </View>
           </View>
 
           <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Additional Information</Text>
+            <Text style={styles.sectionTitle}>
+              {lang === 'fr'
+                ? 'Informations supplémentaires'
+                : lang === 'ara'
+                ? 'معلومات إضافية'
+                : 'Additional Information'}
+            </Text>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Current Mileage *</Text>
+              <Text style={styles.label}>
+                {lang === 'fr'
+                  ? 'Kilométrage actuel *'
+                  : lang === 'ara'
+                  ? 'عدد الكيلومترات الحالي *'
+                  : 'Current Mileage *'}
+              </Text>
               <TextInput
                 style={styles.input}
                 value={mileage}
                 onChangeText={setMileage}
-                placeholder="e.g., 50000"
+                placeholder={
+                  lang === 'fr'
+                    ? 'ex. 50000'
+                    : lang === 'ara'
+                    ? 'مثال: 50000'
+                    : 'e.g., 50000'
+                }
                 keyboardType="numeric"
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Purchase Date</Text>
+              <Text style={styles.label}>
+                {lang === 'fr'
+                  ? "Date d'achat"
+                  : lang === 'ara'
+                  ? 'تاريخ الشراء'
+                  : 'Purchase Date'}
+              </Text>
               <TouchableOpacity
                 style={styles.datePickerButton}
                 onPress={() => setShowDatePicker(true)}
@@ -285,7 +442,13 @@ export default function AddVehicleScreen() {
             {saving ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.submitButtonText}>Add Vehicle</Text>
+              <Text style={styles.submitButtonText}>
+                {lang === 'fr'
+                  ? 'Ajouter le véhicule'
+                  : lang === 'ara'
+                  ? 'إضافة السيارة'
+                  : 'Add Vehicle'}
+              </Text>
             )}
           </TouchableOpacity>
         </ScrollView>

@@ -1,3 +1,4 @@
+import { useLanguage } from '@/context/LanguageContext';
 import { useReminder } from '@/database/useReminder';
 import { supabase } from '@/lib/supabase';
 import { Reminder, Vehicle } from '@/types';
@@ -21,6 +22,7 @@ import {
 } from 'react-native';
 
 export default function ReminderDetailScreen() {
+  const { lang } = useLanguage();
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const [reminder, setReminder] = useState<Reminder | null>(null);
@@ -71,7 +73,13 @@ export default function ReminderDetailScreen() {
   if (isLoading && (!reminder || !vehicle)) {
     return (
       <View style={styles.container}>
-        <Text>Loading...</Text>
+        <Text>
+          {lang === 'fr'
+            ? 'Chargement...'
+            : lang === 'ara'
+            ? 'جارٍ التحميل...'
+            : 'Loading...'}
+        </Text>
       </View>
     );
   }
@@ -79,7 +87,13 @@ export default function ReminderDetailScreen() {
   if (error) {
     return (
       <View style={styles.container}>
-        <Text>Error: {error}</Text>
+        <Text>
+          {lang === 'fr'
+            ? `Erreur : ${error}`
+            : lang === 'ara'
+            ? `خطأ: ${error}`
+            : `Error: ${error}`}
+        </Text>
       </View>
     );
   }
@@ -87,7 +101,13 @@ export default function ReminderDetailScreen() {
   if (!reminder || !vehicle) {
     return (
       <View style={styles.container}>
-        <Text>Reminder not found</Text>
+        <Text>
+          {lang === 'fr'
+            ? 'Rappel non trouvé'
+            : lang === 'ara'
+            ? 'التذكير غير موجود'
+            : 'Reminder not found'}
+        </Text>
       </View>
     );
   }
@@ -105,11 +125,27 @@ export default function ReminderDetailScreen() {
   };
 
   const getStatusText = () => {
-    if (reminder.isComplete) return 'Completed';
-    if (daysUntilDue < 0) return 'Overdue';
-    if (daysUntilDue === 0) return 'Due today';
-    if (daysUntilDue === 1) return 'Due tomorrow';
-    return `Due in ${daysUntilDue} days`;
+    if (reminder.isComplete)
+      return lang === 'fr' ? 'Terminé' : lang === 'ara' ? 'مكتمل' : 'Completed';
+    if (daysUntilDue < 0)
+      return lang === 'fr' ? 'En retard' : lang === 'ara' ? 'متأخر' : 'Overdue';
+    if (daysUntilDue === 0)
+      return lang === 'fr'
+        ? "À faire aujourd'hui"
+        : lang === 'ara'
+        ? 'مستحق اليوم'
+        : 'Due today';
+    if (daysUntilDue === 1)
+      return lang === 'fr'
+        ? 'À faire demain'
+        : lang === 'ara'
+        ? 'مستحق غداً'
+        : 'Due tomorrow';
+    return lang === 'fr'
+      ? `À faire dans ${daysUntilDue} jours`
+      : lang === 'ara'
+      ? `مستحق بعد ${daysUntilDue} أيام`
+      : `Due in ${daysUntilDue} days`;
   };
 
   return (
@@ -117,7 +153,12 @@ export default function ReminderDetailScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          headerTitle: 'Reminder Details',
+          headerTitle:
+            lang === 'fr'
+              ? 'Détails du rappel'
+              : lang === 'ara'
+              ? 'تفاصيل التذكير'
+              : 'Reminder Details',
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.back()}
@@ -168,7 +209,13 @@ export default function ReminderDetailScreen() {
               <View style={styles.detailItem}>
                 <Calendar size={20} color="#6B7280" />
                 <View style={styles.detailText}>
-                  <Text style={styles.detailLabel}>Due Date</Text>
+                  <Text style={styles.detailLabel}>
+                    {lang === 'fr'
+                      ? "Date d'échéance"
+                      : lang === 'ara'
+                      ? 'تاريخ الاستحقاق'
+                      : 'Due Date'}
+                  </Text>
                   <Text style={styles.detailValue}>
                     {new Date(reminder.dueDate).toLocaleDateString()}
                   </Text>
@@ -178,7 +225,13 @@ export default function ReminderDetailScreen() {
                 <View style={styles.detailItem}>
                   <Car size={20} color="#6B7280" />
                   <View style={styles.detailText}>
-                    <Text style={styles.detailLabel}>Due Kilometrage</Text>
+                    <Text style={styles.detailLabel}>
+                      {lang === 'fr'
+                        ? 'Kilométrage dû'
+                        : lang === 'ara'
+                        ? 'الكيلومترات المستحقة'
+                        : 'Due Kilometrage'}
+                    </Text>
                     <Text style={styles.detailValue}>
                       {reminder.dueMileage.toLocaleString()} klms
                     </Text>
@@ -191,17 +244,30 @@ export default function ReminderDetailScreen() {
               <View style={[styles.detailRow, styles.recurringSection]}>
                 <View style={styles.recurringHeader}>
                   <Clock size={20} color="#6B7280" />
-                  <Text style={styles.recurringTitle}>Recurring Settings</Text>
+                  <Text style={styles.recurringTitle}>
+                    {lang === 'fr'
+                      ? 'Paramètres récurrents'
+                      : lang === 'ara'
+                      ? 'الإعدادات المتكررة'
+                      : 'Recurring Settings'}
+                  </Text>
                 </View>
                 {reminder.recurringInterval && (
                   <Text style={styles.recurringText}>
-                    Repeats every {reminder.recurringInterval} days
+                    {lang === 'fr'
+                      ? `Répète tous les ${reminder.recurringInterval} jours`
+                      : lang === 'ara'
+                      ? `يتكرر كل ${reminder.recurringInterval} أيام`
+                      : `Repeats every ${reminder.recurringInterval} days`}
                   </Text>
                 )}
                 {reminder.recurringMileage && (
                   <Text style={styles.recurringText}>
-                    Repeats every {reminder.recurringMileage.toLocaleString()}{' '}
-                    klms
+                    {lang === 'fr'
+                      ? `يتكرر كل ${reminder.recurringMileage.toLocaleString()} كلم`
+                      : lang === 'ara'
+                      ? `يتكرر كل ${reminder.recurringMileage.toLocaleString()} كلم`
+                      : `Repeats every ${reminder.recurringMileage.toLocaleString()} klms`}
                   </Text>
                 )}
               </View>
@@ -210,7 +276,13 @@ export default function ReminderDetailScreen() {
 
           {reminder.description && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Description</Text>
+              <Text style={styles.sectionTitle}>
+                {lang === 'fr'
+                  ? 'Description'
+                  : lang === 'ara'
+                  ? 'الوصف'
+                  : 'Description'}
+              </Text>
               <Text style={styles.description}>{reminder.description}</Text>
             </View>
           )}
@@ -230,7 +302,15 @@ export default function ReminderDetailScreen() {
                 ]}
               >
                 {reminder.isComplete
-                  ? 'Mark as Incomplete'
+                  ? lang === 'fr'
+                    ? 'Marquer comme incomplet'
+                    : lang === 'ara'
+                    ? 'وضع علامة كغير مكتمل'
+                    : 'Mark as Incomplete'
+                  : lang === 'fr'
+                  ? 'Marquer comme terminé'
+                  : lang === 'ara'
+                  ? 'وضع علامة كمكتمل'
                   : 'Mark as Complete'}
               </Text>
             </TouchableOpacity>
@@ -244,10 +324,19 @@ export default function ReminderDetailScreen() {
             <View style={styles.modalIcon}>
               <AlertTriangle size={32} color="#EF4444" />
             </View>
-            <Text style={styles.modalTitle}>Delete Reminder?</Text>
+            <Text style={styles.modalTitle}>
+              {lang === 'fr'
+                ? 'Supprimer le rappel?'
+                : lang === 'ara'
+                ? 'حذف التذكير؟'
+                : 'Delete Reminder?'}
+            </Text>
             <Text style={styles.modalMessage}>
-              This action cannot be undone. Are you sure you want to delete this
-              reminder?
+              {lang === 'fr'
+                ? 'Cette action est irréversible. Êtes-vous sûr de vouloir supprimer ce rappel?'
+                : lang === 'ara'
+                ? 'هذا الإجراء لا يمكن التراجع عنه. هل أنت متأكد أنك تريد حذف هذا التذكير؟'
+                : 'This action cannot be undone. Are you sure you want to delete this reminder?'}
             </Text>
             {error && <Text style={styles.errorText}>{error}</Text>}
             <View style={styles.modalButtons}>
@@ -255,7 +344,13 @@ export default function ReminderDetailScreen() {
                 style={styles.cancelButton}
                 onPress={() => setShowDeleteConfirm(false)}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>
+                  {lang === 'fr'
+                    ? 'Annuler'
+                    : lang === 'ara'
+                    ? 'إلغاء'
+                    : 'Cancel'}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.deleteButton}
@@ -263,7 +358,17 @@ export default function ReminderDetailScreen() {
                 disabled={isLoading}
               >
                 <Text style={styles.deleteButtonText}>
-                  {isLoading ? 'Deleting...' : 'Delete'}
+                  {isLoading
+                    ? lang === 'fr'
+                      ? 'Suppression...'
+                      : lang === 'ara'
+                      ? 'جارٍ الحذف...'
+                      : 'Deleting...'
+                    : lang === 'fr'
+                    ? 'Supprimer'
+                    : lang === 'ara'
+                    ? 'حذف'
+                    : 'Delete'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -273,7 +378,6 @@ export default function ReminderDetailScreen() {
     </>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

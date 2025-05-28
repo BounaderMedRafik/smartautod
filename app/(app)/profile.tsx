@@ -13,8 +13,10 @@ import {
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { router } from 'expo-router';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function ProfileScreen() {
+  const { lang, setLang } = useLanguage();
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [user, setUser] = useState<{ name: string; email: string } | null>(
@@ -39,20 +41,48 @@ export default function ProfileScreen() {
   const handleSignOut = async () => {
     const signOutConfirmed =
       Platform.OS === 'web'
-        ? confirm('Are you sure you want to sign out?')
+        ? confirm(
+            lang === 'eng'
+              ? 'Are you sure you want to sign out?'
+              : lang === 'fr'
+              ? 'Êtes-vous sûr de vouloir vous déconnecter ?'
+              : 'هل أنت متأكد أنك تريد تسجيل الخروج؟'
+          )
         : await new Promise<boolean>((resolve) =>
-            Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-              {
-                text: 'Cancel',
-                style: 'cancel',
-                onPress: () => resolve(false),
-              },
-              {
-                text: 'Sign Out',
-                style: 'destructive',
-                onPress: () => resolve(true),
-              },
-            ])
+            Alert.alert(
+              lang === 'eng'
+                ? 'Sign Out'
+                : lang === 'fr'
+                ? 'Déconnexion'
+                : 'تسجيل الخروج',
+              lang === 'eng'
+                ? 'Are you sure you want to sign out?'
+                : lang === 'fr'
+                ? 'Êtes-vous sûr de vouloir vous déconnecter ?'
+                : 'هل أنت متأكد أنك تريد تسجيل الخروج؟',
+              [
+                {
+                  text:
+                    lang === 'eng'
+                      ? 'Cancel'
+                      : lang === 'fr'
+                      ? 'Annuler'
+                      : 'إلغاء',
+                  style: 'cancel',
+                  onPress: () => resolve(false),
+                },
+                {
+                  text:
+                    lang === 'eng'
+                      ? 'Sign Out'
+                      : lang === 'fr'
+                      ? 'Se Déconnecter'
+                      : 'تسجيل الخروج',
+                  style: 'destructive',
+                  onPress: () => resolve(true),
+                },
+              ]
+            )
           );
 
     if (signOutConfirmed) {
@@ -60,6 +90,10 @@ export default function ProfileScreen() {
       //@ts-ignore
       router.replace('/(auth)/');
     }
+  };
+
+  const toggleLang = () => {
+    setLang(lang === 'eng' ? 'fr' : lang === 'fr' ? 'ara' : 'eng');
   };
 
   return (
@@ -79,11 +113,24 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notifications</Text>
+        <Text style={styles.sectionTitle}>
+          {lang === 'eng'
+            ? 'Notifications'
+            : lang === 'fr'
+            ? 'Notifications'
+            : 'الإشعارات'}
+        </Text>
+
         <View style={styles.settingItem}>
           <View style={styles.settingLeft}>
             <Bell size={20} color="#4B5563" />
-            <Text style={styles.settingText}>Push Notifications</Text>
+            <Text style={styles.settingText}>
+              {lang === 'eng'
+                ? 'Push Notifications'
+                : lang === 'fr'
+                ? 'Notifications Push'
+                : 'إشعارات الدفع'}
+            </Text>
           </View>
           <Switch
             value={pushNotifications}
@@ -92,10 +139,17 @@ export default function ProfileScreen() {
             thumbColor={pushNotifications ? '#3B6FE0' : '#F3F4F6'}
           />
         </View>
+
         <View style={styles.settingItem}>
           <View style={styles.settingLeft}>
             <Mail size={20} color="#4B5563" />
-            <Text style={styles.settingText}>Email Notifications</Text>
+            <Text style={styles.settingText}>
+              {lang === 'eng'
+                ? 'Email Notifications'
+                : lang === 'fr'
+                ? 'Notifications Email'
+                : 'إشعارات البريد الإلكتروني'}
+            </Text>
           </View>
           <Switch
             value={emailNotifications}
@@ -106,16 +160,31 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      <TouchableOpacity style={styles.langToggleButton} onPress={toggleLang}>
+        <Text style={styles.settingText}>
+          {lang === 'eng'
+            ? 'Switch to French'
+            : lang === 'fr'
+            ? 'Passer à l’arabe'
+            : 'التحويل إلى الإنجليزية'}
+        </Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
         <LogOut size={20} color="#E03B3B" />
-        <Text style={styles.signOutText}>Sign Out</Text>
+        <Text style={styles.signOutText}>
+          {lang === 'eng'
+            ? 'Sign Out'
+            : lang === 'fr'
+            ? 'Se Déconnecter'
+            : 'تسجيل الخروج'}
+        </Text>
       </TouchableOpacity>
 
       <Text style={styles.versionText}>Version 1.0.0</Text>
     </ScrollView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -140,6 +209,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 16,
   },
+  langToggleButton: {
+    marginVertical: 20,
+    marginHorizontal: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#E5E7EB', // Light gray background
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+
   profileInfo: {
     flex: 1,
   },

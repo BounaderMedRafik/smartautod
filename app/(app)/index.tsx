@@ -1,7 +1,7 @@
+import { useLanguage } from '@/context/LanguageContext';
 import { useFetchCarById } from '@/database/useFetchCarById';
 import { useVehicleReminders } from '@/database/useVehicleReminders';
 import { useStoredUser } from '@/hooks/useStoredData';
-import { getDateDifferenceText } from '@/lib/dateUtils';
 import { supabase } from '@/lib/supabase';
 import { Vehicle, VehicleCardProps } from '@/types';
 import { useRouter } from 'expo-router';
@@ -64,6 +64,8 @@ function useUserVehicles() {
 }
 
 const VehicleCard = ({ vehicle, userId, onPress }: VehicleCardProps) => {
+  const { lang } = useLanguage();
+
   const { nearestReminder, loading: reminderLoading } = useVehicleReminders(
     vehicle.id,
     userId
@@ -73,21 +75,14 @@ const VehicleCard = ({ vehicle, userId, onPress }: VehicleCardProps) => {
     useFetchCarById(vehicle.id as string);
 
   const getLatestMileage = () => {
-    // Get all maintenance mileages
     const maintenanceMileages = maintenance.map((m) => m.mileage);
-
-    // Get all finance mileages (assuming finances have mileage field)
     //@ts-ignore
     const financeMileages = finances.map((f) => f.mileage || 0);
-
-    // Combine all mileages with current vehicle mileage
     const allMileages = [
       ...maintenanceMileages,
       ...financeMileages,
       vehicle?.mileage,
     ];
-
-    // Return the highest mileage
     return Math.max(...allMileages);
   };
 
@@ -116,22 +111,40 @@ const VehicleCard = ({ vehicle, userId, onPress }: VehicleCardProps) => {
       <View style={styles.vehicleStats}>
         <View style={styles.statItem}>
           <Fuel size={18} color="#6B7280" />
-          <Text style={styles.statLabel}>Kilometrage</Text>
+          <Text style={styles.statLabel}>
+            {lang === 'eng'
+              ? 'Mileage'
+              : lang === 'fr'
+              ? 'Kilométrage'
+              : 'عدد الكيلومترات'}
+          </Text>
           <Text style={styles.statValue}>
-            {getLatestMileage().toLocaleString()} klms{' '}
+            {getLatestMileage().toLocaleString()} km
           </Text>
         </View>
+
         <View style={styles.divider} />
+
         <View style={styles.statItem}>
           <Calendar size={18} color="#6B7280" />
-          <Text style={styles.statLabel}>Next Service</Text>
+          <Text style={styles.statLabel}>
+            {lang === 'eng'
+              ? 'Next Service'
+              : lang === 'fr'
+              ? 'Prochain service'
+              : 'الخدمة القادمة'}
+          </Text>
           <Text style={styles.statValue}>
             {reminderLoading ? (
               <ActivityIndicator size="small" color="#6B7280" />
             ) : nearestReminder ? (
               new Date(nearestReminder.dueDate).toLocaleDateString()
-            ) : (
+            ) : lang === 'eng' ? (
               'No upcoming reminders'
+            ) : lang === 'fr' ? (
+              'Aucun rappel à venir'
+            ) : (
+              'لا توجد تذكيرات قادمة'
             )}
           </Text>
         </View>
@@ -141,6 +154,7 @@ const VehicleCard = ({ vehicle, userId, onPress }: VehicleCardProps) => {
 };
 
 export default function DashboardScreen() {
+  const { lang } = useLanguage(); // 👈 language state
   const { user } = useStoredUser();
   const {
     vehicles: fetchedVehicles,
@@ -176,32 +190,62 @@ export default function DashboardScreen() {
         {loading && !refreshing ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#3B6FE0" />
-            <Text style={styles.loadingText}>Loading your vehicles...</Text>
+            <Text style={styles.loadingText}>
+              {lang === 'eng'
+                ? 'Loading your vehicles...'
+                : lang === 'fr'
+                ? 'Chargement de vos véhicules...'
+                : 'جاري تحميل مركباتك...'}
+            </Text>
           </View>
         ) : fetchedVehicles.length === 0 ? (
           <View style={styles.emptyState}>
             <CarFront size={60} color="#9CA3AF" />
-            <Text style={styles.emptyStateTitle}>No Vehicles Yet</Text>
+            <Text style={styles.emptyStateTitle}>
+              {lang === 'eng'
+                ? 'No Vehicles Yet'
+                : lang === 'fr'
+                ? 'Aucun véhicule'
+                : 'لا توجد مركبات بعد'}
+            </Text>
             <Text style={styles.emptyStateText}>
-              Add your first vehicle to get started
+              {lang === 'eng'
+                ? 'Add your first vehicle to get started'
+                : lang === 'fr'
+                ? 'Ajoutez votre premier véhicule pour commencer'
+                : 'أضف أول مركبة للبدء'}
             </Text>
             <TouchableOpacity
               style={styles.addVehicleButton}
               onPress={handleAddVehicle}
             >
-              <Text style={styles.addVehicleButtonText}>Add Vehicle</Text>
+              <Text style={styles.addVehicleButtonText}>
+                {lang === 'eng'
+                  ? 'Add Vehicle'
+                  : lang === 'fr'
+                  ? 'Ajouter un véhicule'
+                  : 'إضافة مركبة'}
+              </Text>
             </TouchableOpacity>
           </View>
         ) : (
           <>
             <View style={styles.header}>
-              <Text style={styles.headerTitle}>My Vehicles</Text>
+              <Text style={styles.headerTitle}>
+                {lang === 'eng'
+                  ? 'My Vehicles'
+                  : lang === 'fr'
+                  ? 'Mes véhicules'
+                  : 'مركباتي'}
+              </Text>
               <TouchableOpacity
                 style={styles.addButton}
                 onPress={handleAddVehicle}
               >
                 <PlusCircle size={24} color="#3B6FE0" />
-                <Text style={styles.addButtonText}>Add</Text>
+                <Text style={styles.addButtonText}>
+                  {lang === 'eng' ? 'Add' : lang === 'fr' ? 'Ajouter' : 'إضافة'}
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -225,10 +269,19 @@ export default function DashboardScreen() {
                   <Info size={20} color="#3B6FE0" />
                 </View>
                 <View style={styles.tipContent}>
-                  <Text style={styles.tipTitle}>Maintenance Tip</Text>
+                  <Text style={styles.tipTitle}>
+                    {lang === 'eng'
+                      ? 'Maintenance Tip'
+                      : lang === 'fr'
+                      ? "Conseil d'entretien"
+                      : 'نصيحة صيانة'}
+                  </Text>
                   <Text style={styles.tipText}>
-                    Check your tire pressure monthly and before long trips for
-                    optimal performance and safety.
+                    {lang === 'eng'
+                      ? 'Check your tire pressure monthly and before long trips for optimal performance and safety.'
+                      : lang === 'fr'
+                      ? 'Vérifiez la pression des pneus chaque mois et avant les longs trajets pour une performance optimale et une sécurité accrue.'
+                      : 'افحص ضغط الإطارات شهريًا وقبل الرحلات الطويلة لضمان الأداء الأمثل والسلامة.'}
                   </Text>
                 </View>
               </View>

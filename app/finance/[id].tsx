@@ -1,3 +1,4 @@
+import { useLanguage } from '@/context/LanguageContext';
 import { useDeleteFinancialRecord } from '@/database/useDeleteFinance';
 import { supabase } from '@/lib/supabase';
 import { FinancialRecord, Vehicle } from '@/types';
@@ -25,6 +26,7 @@ import {
 } from 'react-native';
 
 export default function FinanceDetailScreen() {
+  const { lang } = useLanguage();
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const [record, setRecord] = useState<FinancialRecord | null>(null);
@@ -62,19 +64,28 @@ export default function FinanceDetailScreen() {
         }
       } catch (err) {
         //@ts-ignore
-        setError(err.message || 'Failed to load data');
+        setError(
+          //@ts-ignore
+          err.message ||
+            (lang === 'fr'
+              ? 'Échec du chargement des données'
+              : lang === 'ara'
+              ? 'فشل تحميل البيانات'
+              : 'Failed to load data')
+        );
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [id]);
+  }, [id, lang]);
 
   const handleDelete = async () => {
     const success = await deleteFinancialRecord(id as string);
     if (success) {
       setShowDeleteConfirm(false);
+      router.back();
     }
   };
 
@@ -112,7 +123,13 @@ export default function FinanceDetailScreen() {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#3B82F6" />
-        <Text style={styles.loadingText}>Loading expense details...</Text>
+        <Text style={styles.loadingText}>
+          {lang === 'fr'
+            ? 'Chargement des détails de la dépense...'
+            : lang === 'ara'
+            ? 'جار تحميل تفاصيل المصروف...'
+            : 'Loading expense details...'}
+        </Text>
       </View>
     );
   }
@@ -120,12 +137,17 @@ export default function FinanceDetailScreen() {
   if (error) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Error: {error}</Text>
+        <Text style={styles.errorText}>
+          {lang === 'fr' ? 'Erreur : ' : lang === 'ara' ? 'خطأ: ' : 'Error: '}
+          {error}
+        </Text>
         <TouchableOpacity
           style={styles.retryButton}
           onPress={() => router.back()}
         >
-          <Text style={styles.retryButtonText}>Go Back</Text>
+          <Text style={styles.retryButtonText}>
+            {lang === 'fr' ? 'Retour' : lang === 'ara' ? 'عودة' : 'Go Back'}
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -134,7 +156,13 @@ export default function FinanceDetailScreen() {
   if (!record || !vehicle) {
     return (
       <View style={styles.container}>
-        <Text>Record not found</Text>
+        <Text>
+          {lang === 'fr'
+            ? 'Enregistrement introuvable'
+            : lang === 'ara'
+            ? 'السجل غير موجود'
+            : 'Record not found'}
+        </Text>
       </View>
     );
   }
@@ -147,7 +175,12 @@ export default function FinanceDetailScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          headerTitle: 'Expense Details',
+          headerTitle:
+            lang === 'fr'
+              ? 'Détails de la dépense'
+              : lang === 'ara'
+              ? 'تفاصيل المصروف'
+              : 'Expense Details',
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.back()}
@@ -179,7 +212,11 @@ export default function FinanceDetailScreen() {
             <View style={styles.headerInfo}>
               <Text style={styles.amount}>${record.amount}</Text>
               <Text style={styles.type}>
-                {record.type.charAt(0).toUpperCase() + record.type.slice(1)}
+                {lang === 'fr'
+                  ? record.type.charAt(0).toUpperCase() + record.type.slice(1)
+                  : lang === 'ara'
+                  ? translateType(record.type, lang)
+                  : record.type.charAt(0).toUpperCase() + record.type.slice(1)}
               </Text>
             </View>
           </View>
@@ -190,7 +227,13 @@ export default function FinanceDetailScreen() {
               <View style={styles.detailItem}>
                 <Calendar size={20} color="#6B7280" />
                 <View style={styles.detailText}>
-                  <Text style={styles.detailLabel}>Date</Text>
+                  <Text style={styles.detailLabel}>
+                    {lang === 'fr'
+                      ? 'Date'
+                      : lang === 'ara'
+                      ? 'التاريخ'
+                      : 'Date'}
+                  </Text>
                   <Text style={styles.detailValue}>
                     {new Date(record.date).toLocaleDateString()}
                   </Text>
@@ -199,7 +242,13 @@ export default function FinanceDetailScreen() {
               <View style={styles.detailItem}>
                 <Car size={20} color="#6B7280" />
                 <View style={styles.detailText}>
-                  <Text style={styles.detailLabel}>Vehicle</Text>
+                  <Text style={styles.detailLabel}>
+                    {lang === 'fr'
+                      ? 'Véhicule'
+                      : lang === 'ara'
+                      ? 'المركبة'
+                      : 'Vehicle'}
+                  </Text>
                   <Text style={styles.detailValue}>
                     {vehicle.year} {vehicle.make} {vehicle.model}
                   </Text>
@@ -211,16 +260,34 @@ export default function FinanceDetailScreen() {
           {/* Description */}
           {record.description && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Description</Text>
+              <Text style={styles.sectionTitle}>
+                {lang === 'fr'
+                  ? 'Description'
+                  : lang === 'ara'
+                  ? 'الوصف'
+                  : 'Description'}
+              </Text>
               <Text style={styles.description}>{record.description}</Text>
             </View>
           )}
 
           {/* Additional Info */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Additional Information</Text>
+            <Text style={styles.sectionTitle}>
+              {lang === 'fr'
+                ? 'Informations supplémentaires'
+                : lang === 'ara'
+                ? 'معلومات إضافية'
+                : 'Additional Information'}
+            </Text>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Created At</Text>
+              <Text style={styles.infoLabel}>
+                {lang === 'fr'
+                  ? 'Créé le'
+                  : lang === 'ara'
+                  ? 'تاريخ الإنشاء'
+                  : 'Created At'}
+              </Text>
               <Text style={styles.infoValue}>
                 {new Date(record.date).toLocaleString()}
               </Text>
@@ -236,23 +303,44 @@ export default function FinanceDetailScreen() {
             <View style={styles.modalIcon}>
               <AlertTriangle size={32} color="#EF4444" />
             </View>
-            <Text style={styles.modalTitle}>Delete Expense?</Text>
+            <Text style={styles.modalTitle}>
+              {lang === 'fr'
+                ? 'Supprimer la dépense ?'
+                : lang === 'ara'
+                ? 'حذف المصروف؟'
+                : 'Delete Expense?'}
+            </Text>
             <Text style={styles.modalMessage}>
-              This will permanently delete this expense record. This action
-              cannot be undone.
+              {lang === 'fr'
+                ? 'Cela supprimera définitivement cet enregistrement de dépense. Cette action est irréversible.'
+                : lang === 'ara'
+                ? 'سيؤدي هذا إلى حذف سجل المصروف هذا نهائيًا. لا يمكن التراجع عن هذا الإجراء.'
+                : 'This will permanently delete this expense record. This action cannot be undone.'}
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={() => setShowDeleteConfirm(false)}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>
+                  {lang === 'fr'
+                    ? 'Annuler'
+                    : lang === 'ara'
+                    ? 'إلغاء'
+                    : 'Cancel'}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.deleteButton}
                 onPress={handleDelete}
               >
-                <Text style={styles.deleteButtonText}>Delete</Text>
+                <Text style={styles.deleteButtonText}>
+                  {lang === 'fr'
+                    ? 'Supprimer'
+                    : lang === 'ara'
+                    ? 'حذف'
+                    : 'Delete'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -260,6 +348,24 @@ export default function FinanceDetailScreen() {
       )}
     </>
   );
+}
+
+// Helper function to translate record types to Arabic (you can extend)
+function translateType(type: string, lang: string) {
+  if (lang !== 'ara') return type.charAt(0).toUpperCase() + type.slice(1);
+
+  switch (type) {
+    case 'fuel':
+      return 'وقود';
+    case 'insurance':
+      return 'تأمين';
+    case 'tax':
+      return 'ضريبة';
+    case 'maintenance':
+      return 'صيانة';
+    default:
+      return 'نوع';
+  }
 }
 
 const styles = StyleSheet.create({

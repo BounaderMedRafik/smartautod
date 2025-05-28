@@ -30,22 +30,45 @@ import { Reminder } from '@/types';
 import { useAddReminder } from '@/database/useAddReminder';
 import { useUserVehicles } from '@/database/useFetchAllCarsById';
 import { useStoredUser } from '@/hooks/useStoredData';
+import { useLanguage } from '@/context/LanguageContext';
 
 const REMINDER_TYPES = [
   {
     value: 'maintenance',
-    label: 'Maintenance',
+    label: { en: 'Maintenance', fr: 'Entretien', ara: 'الصيانة' },
     icon: Wrench,
     color: '#3B82F6',
   },
-  { value: 'fuel', label: 'Fuel', icon: Fuel, color: '#F59E0B' },
-  { value: 'insurance', label: 'Insurance', icon: Shield, color: '#10B981' },
-  { value: 'tax', label: 'Tax', icon: FileText, color: '#8B5CF6' },
-  { value: 'other', label: 'Other', icon: Tag, color: '#6B7280' },
+  {
+    value: 'fuel',
+    label: { en: 'Fuel', fr: 'Carburant', ara: 'الوقود' },
+    icon: Fuel,
+    color: '#F59E0B',
+  },
+  {
+    value: 'insurance',
+    label: { en: 'Insurance', fr: 'Assurance', ara: 'التأمين' },
+    icon: Shield,
+    color: '#10B981',
+  },
+  {
+    value: 'tax',
+    label: { en: 'Tax', fr: 'Taxe', ara: 'الضريبة' },
+    icon: FileText,
+    color: '#8B5CF6',
+  },
+  {
+    value: 'other',
+    label: { en: 'Other', fr: 'Autre', ara: 'أخرى' },
+    icon: Tag,
+    color: '#6B7280',
+  },
 ];
 
 export default function AddReminderScreen() {
   const router = useRouter();
+  const { lang } = useLanguage();
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState<string>('');
@@ -62,28 +85,130 @@ export default function AddReminderScreen() {
   const { addReminder, loading } = useAddReminder();
   const { vehicles, loading: vehiclesLoading } = useUserVehicles();
 
+  const t = {
+    // general
+    requiredField: {
+      en: 'Please fill in all required fields',
+      fr: 'Veuillez remplir tous les champs obligatoires',
+      ara: 'يرجى ملء جميع الحقول المطلوبة',
+    },
+    validMileage: {
+      en: 'Please enter a valid mileage number',
+      fr: 'Veuillez entrer un nombre de kilométrage valide',
+      ara: 'يرجى إدخال رقم أميال صالح',
+    },
+    validInterval: {
+      en: 'Please enter a valid recurring interval',
+      fr: 'Veuillez entrer un intervalle récurrent valide',
+      ara: 'يرجى إدخال فترة متكررة صالحة',
+    },
+    recurringIntervalOrMileage: {
+      en: 'Please enter either a recurring interval or mileage',
+      fr: 'Veuillez entrer un intervalle récurrent ou un kilométrage',
+      ara: 'يرجى إدخال فترة متكررة أو أميال',
+    },
+    failedCreate: {
+      en: 'Failed to create reminder',
+      fr: 'Échec de la création du rappel',
+      ara: 'فشل في إنشاء التذكير',
+    },
+    successCreate: {
+      en: 'Reminder created successfully',
+      fr: 'Rappel créé avec succès',
+      ara: 'تم إنشاء التذكير بنجاح',
+    },
+    addReminder: {
+      en: 'Add Reminder',
+      fr: 'Ajouter un rappel',
+      ara: 'إضافة تذكير',
+    },
+    reminderDetails: {
+      en: 'Reminder Details',
+      fr: 'Détails du rappel',
+      ara: 'تفاصيل التذكير',
+    },
+    title: {
+      en: 'Title *',
+      fr: 'Titre *',
+      ara: 'العنوان *',
+    },
+    titlePlaceholder: {
+      en: 'e.g., Oil Change',
+      fr: "ex. : Changement d'huile",
+      ara: 'مثال: تغيير الزيت',
+    },
+    description: {
+      en: 'Description',
+      fr: 'Description',
+      ara: 'الوصف',
+    },
+    descriptionPlaceholder: {
+      en: 'Add any additional details',
+      fr: 'Ajouter des détails supplémentaires',
+      ara: 'أضف أي تفاصيل إضافية',
+    },
+    vehicle: {
+      en: 'Vehicle *',
+      fr: 'Véhicule *',
+      ara: 'المركبة *',
+    },
+    dueDateMileage: {
+      en: 'Due Date & Mileage',
+      fr: 'Date d’échéance & Kilométrage',
+      ara: 'تاريخ الاستحقاق والأميال',
+    },
+    recurringSettings: {
+      en: 'Recurring Settings',
+      fr: 'Paramètres récurrents',
+      ara: 'إعدادات التكرار',
+    },
+    makeRecurring: {
+      en: 'Make this a recurring reminder',
+      fr: 'Faire de ce rappel un rappel récurrent',
+      ara: 'اجعل هذا تذكيرًا متكررًا',
+    },
+    repeatEveryDays: {
+      en: 'Repeat every (days)',
+      fr: 'Répéter tous les (jours)',
+      ara: 'كرر كل (أيام)',
+    },
+    orRepeatAfterKm: {
+      en: 'OR repeat after (Kilometers)',
+      fr: 'OU répéter après (Kilomètres)',
+      ara: 'أو كرر بعد (كيلومترات)',
+    },
+    createReminder: {
+      en: 'Create Reminder',
+      fr: 'Créer un rappel',
+      ara: 'إنشاء تذكير',
+    },
+  };
+
+  //@ts-ignore
+  const getText = (key: keyof typeof t) => t[key][lang] ?? t[key].en;
+
   const handleSubmit = async () => {
     if (!title || !selectedVehicle) {
-      setError('Please fill in all required fields');
+      setError(getText('requiredField'));
       return;
     }
 
     if (dueMileage && isNaN(parseInt(dueMileage))) {
-      setError('Please enter a valid mileage number');
+      setError(getText('validMileage'));
       return;
     }
 
     if (isRecurring) {
       if (!recurringInterval && !recurringMileage) {
-        setError('Please enter either a recurring interval or mileage');
+        setError(getText('recurringIntervalOrMileage'));
         return;
       }
       if (recurringInterval && isNaN(parseInt(recurringInterval))) {
-        setError('Please enter a valid recurring interval');
+        setError(getText('validInterval'));
         return;
       }
       if (recurringMileage && isNaN(parseInt(recurringMileage))) {
-        setError('Please enter a valid recurring mileage');
+        setError(getText('validMileage'));
         return;
       }
     }
@@ -110,12 +235,12 @@ export default function AddReminderScreen() {
       const result = await addReminder(reminderData);
 
       if (result) {
-        Alert.alert('Success', 'Reminder created successfully');
+        Alert.alert(getText('successCreate'));
         router.back();
       }
     } catch (err) {
       //@ts-ignore
-      setError(err.message || 'Failed to create reminder');
+      setError(err.message || getText('failedCreate'));
     }
   };
 
@@ -135,7 +260,7 @@ export default function AddReminderScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          headerTitle: 'Add Reminder',
+          headerTitle: getText('addReminder'),
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.back()}
@@ -159,7 +284,9 @@ export default function AddReminderScreen() {
           )}
 
           <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Reminder Details</Text>
+            <Text style={styles.sectionTitle}>
+              {getText('reminderDetails')}
+            </Text>
 
             <View style={styles.typeSelector}>
               {REMINDER_TYPES.map((type) => (
@@ -186,30 +313,33 @@ export default function AddReminderScreen() {
                       selectedType === type.value && { color: '#FFFFFF' },
                     ]}
                   >
-                    {type.label}
+                    {
+                      //@ts-ignore
+                      type.label[lang] ?? type.label.en
+                    }
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Title *</Text>
+              <Text style={styles.label}>{getText('title')}</Text>
               <TextInput
                 style={styles.input}
                 value={title}
                 onChangeText={setTitle}
-                placeholder="e.g., Oil Change"
+                placeholder={getText('titlePlaceholder')}
                 placeholderTextColor="#9CA3AF"
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Description</Text>
+              <Text style={styles.label}>{getText('description')}</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={description}
                 onChangeText={setDescription}
-                placeholder="Add any additional details"
+                placeholder={getText('descriptionPlaceholder')}
                 placeholderTextColor="#9CA3AF"
                 multiline
                 numberOfLines={4}
@@ -217,7 +347,7 @@ export default function AddReminderScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Vehicle *</Text>
+              <Text style={styles.label}>{getText('vehicle')}</Text>
               {vehiclesLoading ? (
                 <ActivityIndicator size="small" color="#3B82F6" />
               ) : (
@@ -246,7 +376,7 @@ export default function AddReminderScreen() {
           </View>
 
           <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Due Date & Mileage</Text>
+            <Text style={styles.sectionTitle}>{getText('dueDateMileage')}</Text>
 
             <TouchableOpacity
               style={styles.datePickerButton}
@@ -282,12 +412,12 @@ export default function AddReminderScreen() {
           </View>
 
           <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Recurring Settings</Text>
+            <Text style={styles.sectionTitle}>
+              {getText('recurringSettings')}
+            </Text>
 
             <View style={styles.switchContainer}>
-              <Text style={styles.switchLabel}>
-                Make this a recurring reminder
-              </Text>
+              <Text style={styles.switchLabel}>{getText('makeRecurring')}</Text>
               <Switch
                 value={isRecurring}
                 onValueChange={setIsRecurring}
@@ -299,7 +429,7 @@ export default function AddReminderScreen() {
             {isRecurring && (
               <>
                 <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Repeat every (days)</Text>
+                  <Text style={styles.label}>{getText('repeatEveryDays')}</Text>
                   <TextInput
                     style={styles.input}
                     value={recurringInterval}
@@ -310,7 +440,7 @@ export default function AddReminderScreen() {
                   />
                 </View>
                 <View style={styles.inputContainer}>
-                  <Text style={styles.label}>OR repeat after (Kilometers)</Text>
+                  <Text style={styles.label}>{getText('orRepeatAfterKm')}</Text>
                   <TextInput
                     style={styles.input}
                     value={recurringMileage}
@@ -332,7 +462,9 @@ export default function AddReminderScreen() {
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.submitButtonText}>Create Reminder</Text>
+              <Text style={styles.submitButtonText}>
+                {getText('createReminder')}
+              </Text>
             )}
           </TouchableOpacity>
         </ScrollView>

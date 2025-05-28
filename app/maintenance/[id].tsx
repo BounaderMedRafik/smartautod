@@ -1,3 +1,4 @@
+import { useLanguage } from '@/context/LanguageContext';
 import { useDeleteMaintenance } from '@/database/useDeleteMaintenance';
 import { useMaintenanceRecord } from '@/database/useMaintenanceRecord';
 import { useUpdateMaintenanceStatus } from '@/database/useUpdateMaintenanceStatus';
@@ -24,6 +25,7 @@ import {
 } from 'react-native';
 
 export default function MaintenanceDetailScreen() {
+  const { lang } = useLanguage();
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { record, loading, error } = useMaintenanceRecord(id as string);
@@ -88,16 +90,38 @@ export default function MaintenanceDetailScreen() {
     }
   };
 
+  // Localize status option labels
   const statusOptions = [
-    { value: 'pending', label: 'Pending' },
-    { value: 'scheduled', label: 'Scheduled' },
-    { value: 'completed', label: 'Completed' },
+    {
+      value: 'pending',
+      label:
+        lang === 'fr'
+          ? 'En attente'
+          : lang === 'ara'
+          ? 'قيد الانتظار'
+          : 'Pending',
+    },
+    {
+      value: 'scheduled',
+      label:
+        lang === 'fr' ? 'Planifié' : lang === 'ara' ? 'مجدول' : 'Scheduled',
+    },
+    {
+      value: 'completed',
+      label: lang === 'fr' ? 'Terminé' : lang === 'ara' ? 'مكتمل' : 'Completed',
+    },
   ];
 
   if (loading) {
     return (
       <View style={styles.container}>
-        <Text>Loading...</Text>
+        <Text>
+          {lang === 'fr'
+            ? 'Chargement...'
+            : lang === 'ara'
+            ? 'جار التحميل...'
+            : 'Loading...'}
+        </Text>
       </View>
     );
   }
@@ -105,7 +129,13 @@ export default function MaintenanceDetailScreen() {
   if (error) {
     return (
       <View style={styles.container}>
-        <Text>Error: {error}</Text>
+        <Text>
+          {lang === 'fr'
+            ? `Erreur : ${error}`
+            : lang === 'ara'
+            ? `خطأ: ${error}`
+            : `Error: ${error}`}
+        </Text>
       </View>
     );
   }
@@ -113,7 +143,13 @@ export default function MaintenanceDetailScreen() {
   if (!record || !vehicle) {
     return (
       <View style={styles.container}>
-        <Text>Record not found</Text>
+        <Text>
+          {lang === 'fr'
+            ? 'Enregistrement non trouvé'
+            : lang === 'ara'
+            ? 'السجل غير موجود'
+            : 'Record not found'}
+        </Text>
       </View>
     );
   }
@@ -123,7 +159,12 @@ export default function MaintenanceDetailScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          headerTitle: 'Maintenance Details',
+          headerTitle:
+            lang === 'fr'
+              ? 'Détails de maintenance'
+              : lang === 'ara'
+              ? 'تفاصيل الصيانة'
+              : 'Maintenance Details',
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.back()}
@@ -169,7 +210,13 @@ export default function MaintenanceDetailScreen() {
               <View style={styles.detailItem}>
                 <Calendar size={20} color="#6B7280" />
                 <View style={styles.detailText}>
-                  <Text style={styles.detailLabel}>Service Date</Text>
+                  <Text style={styles.detailLabel}>
+                    {lang === 'fr'
+                      ? 'Date de service'
+                      : lang === 'ara'
+                      ? 'تاريخ الخدمة'
+                      : 'Service Date'}
+                  </Text>
                   <Text style={styles.detailValue}>
                     {new Date(record.date).toLocaleDateString()}
                   </Text>
@@ -178,7 +225,13 @@ export default function MaintenanceDetailScreen() {
               <View style={styles.detailItem}>
                 <Car size={20} color="#6B7280" />
                 <View style={styles.detailText}>
-                  <Text style={styles.detailLabel}>Kilometrage</Text>
+                  <Text style={styles.detailLabel}>
+                    {lang === 'fr'
+                      ? 'Kilométrage'
+                      : lang === 'ara'
+                      ? 'المسافة'
+                      : 'Kilometrage'}
+                  </Text>
                   <Text style={styles.detailValue}>
                     {record.mileage.toLocaleString()} klm
                   </Text>
@@ -191,7 +244,13 @@ export default function MaintenanceDetailScreen() {
                 <View style={styles.detailItem}>
                   <DollarSign size={20} color="#6B7280" />
                   <View style={styles.detailText}>
-                    <Text style={styles.detailLabel}>Cost</Text>
+                    <Text style={styles.detailLabel}>
+                      {lang === 'fr'
+                        ? 'Coût'
+                        : lang === 'ara'
+                        ? 'التكلفة'
+                        : 'Cost'}
+                    </Text>
                     <Text style={styles.detailValue}>dzd{record.cost}</Text>
                   </View>
                 </View>
@@ -200,7 +259,13 @@ export default function MaintenanceDetailScreen() {
                 <View style={styles.detailItem}>
                   <MapPin size={20} color="#6B7280" />
                   <View style={styles.detailText}>
-                    <Text style={styles.detailLabel}>Location</Text>
+                    <Text style={styles.detailLabel}>
+                      {lang === 'fr'
+                        ? 'Lieu'
+                        : lang === 'ara'
+                        ? 'الموقع'
+                        : 'Location'}
+                    </Text>
                     <Text style={styles.detailValue}>{record.location}</Text>
                   </View>
                 </View>
@@ -208,7 +273,13 @@ export default function MaintenanceDetailScreen() {
             </View>
 
             <View style={styles.statusRow}>
-              <Text style={styles.detailLabel}>Status:</Text>
+              <Text style={styles.detailLabel}>
+                {lang === 'fr'
+                  ? 'Statut:'
+                  : lang === 'ara'
+                  ? 'الحالة:'
+                  : 'Status:'}
+              </Text>
               <View
                 style={[
                   styles.statusBadge,
@@ -221,9 +292,21 @@ export default function MaintenanceDetailScreen() {
               >
                 <Text style={styles.statusText}>
                   {record.isDone
-                    ? 'Completed'
+                    ? lang === 'fr'
+                      ? 'Terminé'
+                      : lang === 'ara'
+                      ? 'مكتمل'
+                      : 'Completed'
                     : record.isScheduled
-                    ? 'Scheduled'
+                    ? lang === 'fr'
+                      ? 'Planifié'
+                      : lang === 'ara'
+                      ? 'مجدول'
+                      : 'Scheduled'
+                    : lang === 'fr'
+                    ? 'En attente'
+                    : lang === 'ara'
+                    ? 'قيد الانتظار'
                     : 'Pending'}
                 </Text>
               </View>
@@ -232,7 +315,13 @@ export default function MaintenanceDetailScreen() {
 
           {record.description && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Description</Text>
+              <Text style={styles.sectionTitle}>
+                {lang === 'fr'
+                  ? 'Description'
+                  : lang === 'ara'
+                  ? 'الوصف'
+                  : 'Description'}
+              </Text>
               <Text style={styles.description}>{record.description}</Text>
             </View>
           )}
@@ -243,7 +332,13 @@ export default function MaintenanceDetailScreen() {
       {showStatusModal && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Update Status</Text>
+            <Text style={styles.modalTitle}>
+              {lang === 'fr'
+                ? 'Mettre à jour le statut'
+                : lang === 'ara'
+                ? 'تحديث الحالة'
+                : 'Update Status'}
+            </Text>
 
             {statusOptions.map((option) => (
               <TouchableOpacity
@@ -267,13 +362,25 @@ export default function MaintenanceDetailScreen() {
                 style={styles.cancelButton}
                 onPress={() => setShowStatusModal(false)}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>
+                  {lang === 'fr'
+                    ? 'Annuler'
+                    : lang === 'ara'
+                    ? 'إلغاء'
+                    : 'Cancel'}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.confirmButton}
                 onPress={handleStatusChange}
               >
-                <Text style={styles.confirmButtonText}>Update</Text>
+                <Text style={styles.confirmButtonText}>
+                  {lang === 'fr'
+                    ? 'Mettre à jour'
+                    : lang === 'ara'
+                    ? 'تحديث'
+                    : 'Update'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -287,23 +394,44 @@ export default function MaintenanceDetailScreen() {
             <View style={styles.modalIcon}>
               <AlertTriangle size={32} color="#EF4444" />
             </View>
-            <Text style={styles.modalTitle}>Delete Record?</Text>
+            <Text style={styles.modalTitle}>
+              {lang === 'fr'
+                ? "Supprimer l'enregistrement ?"
+                : lang === 'ara'
+                ? 'حذف السجل؟'
+                : 'Delete Record?'}
+            </Text>
             <Text style={styles.modalMessage}>
-              This action cannot be undone. Are you sure you want to delete this
-              maintenance record?
+              {lang === 'fr'
+                ? 'Cette action est irréversible. Êtes-vous sûr de vouloir supprimer cet enregistrement de maintenance ?'
+                : lang === 'ara'
+                ? 'هذا الإجراء لا يمكن التراجع عنه. هل أنت متأكد أنك تريد حذف سجل الصيانة هذا؟'
+                : 'This action cannot be undone. Are you sure you want to delete this maintenance record?'}
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={() => setShowDeleteConfirm(false)}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>
+                  {lang === 'fr'
+                    ? 'Annuler'
+                    : lang === 'ara'
+                    ? 'إلغاء'
+                    : 'Cancel'}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.deleteButton}
                 onPress={handleDelete}
               >
-                <Text style={styles.deleteButtonText}>Delete</Text>
+                <Text style={styles.deleteButtonText}>
+                  {lang === 'fr'
+                    ? 'Supprimer'
+                    : lang === 'ara'
+                    ? 'حذف'
+                    : 'Delete'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

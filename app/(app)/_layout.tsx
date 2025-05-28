@@ -1,8 +1,11 @@
+import { useLanguage } from '@/context/LanguageContext';
 import { Tabs } from 'expo-router';
-import { Car, Wrench, Bell, User } from 'lucide-react-native';
+import { Bell, Car, User, Wrench } from 'lucide-react-native';
 import { Platform } from 'react-native';
 
 export default function AppLayout() {
+  const { lang } = useLanguage();
+
   return (
     <Tabs
       screenOptions={{
@@ -35,33 +38,73 @@ export default function AppLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
+          title:
+            lang === 'eng'
+              ? 'Dashboard'
+              : lang === 'fr'
+              ? 'Tableau de bord'
+              : 'لوحة القيادة',
           tabBarIcon: ({ color, size }) => <Car size={size} color={color} />,
-          headerTitle: 'My Vehicles',
+          headerTitle:
+            lang === 'eng'
+              ? 'My Vehicles'
+              : lang === 'fr'
+              ? 'Mes véhicules'
+              : 'مركباتي',
         }}
       />
       <Tabs.Screen
         name="maintenance"
         options={{
-          title: 'Maintenance',
+          title:
+            lang === 'eng'
+              ? 'Maintenance'
+              : lang === 'fr'
+              ? 'Entretien'
+              : 'الصيانة',
           tabBarIcon: ({ color, size }) => <Wrench size={size} color={color} />,
-          headerTitle: 'Maintenance Records',
+          headerTitle:
+            lang === 'eng'
+              ? 'Maintenance Records'
+              : lang === 'fr'
+              ? 'Historique d’entretien'
+              : 'سجلات الصيانة',
         }}
       />
       <Tabs.Screen
         name="reminders"
         options={{
-          title: 'Reminders',
+          title:
+            lang === 'eng'
+              ? 'Reminders'
+              : lang === 'fr'
+              ? 'Rappels'
+              : 'التذكيرات',
           tabBarIcon: ({ color, size }) => <Bell size={size} color={color} />,
-          headerTitle: 'Service Reminders',
+          headerTitle:
+            lang === 'eng'
+              ? 'Service Reminders'
+              : lang === 'fr'
+              ? 'Rappels de service'
+              : 'تذكيرات الخدمة',
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title:
+            lang === 'eng'
+              ? 'Profile'
+              : lang === 'fr'
+              ? 'Profil'
+              : 'الملف الشخصي',
           tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
-          headerTitle: 'My Profile',
+          headerTitle:
+            lang === 'eng'
+              ? 'My Profile'
+              : lang === 'fr'
+              ? 'Mon profil'
+              : 'ملفي الشخصي',
         }}
       />
     </Tabs>

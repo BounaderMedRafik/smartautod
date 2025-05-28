@@ -1,29 +1,38 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Mail, ArrowLeft } from 'lucide-react-native';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function ForgotPasswordScreen() {
+  const { lang } = useLanguage();
+
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const router = useRouter();
 
   const handleSubmit = () => {
     if (!email) {
-      setError('Please enter your email address');
+      setError(
+        lang === 'fr'
+          ? 'Veuillez saisir votre adresse e-mail'
+          : lang === 'ara'
+          ? 'يرجى إدخال بريدك الإلكتروني'
+          : 'Please enter your email address'
+      );
       return;
     }
 
@@ -43,8 +52,8 @@ export default function ForgotPasswordScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <TouchableOpacity 
-          style={styles.backButton} 
+        <TouchableOpacity
+          style={styles.backButton}
           onPress={() => router.back()}
         >
           <ArrowLeft size={24} color="#1F2937" />
@@ -53,11 +62,21 @@ export default function ForgotPasswordScreen() {
         <View style={styles.formContainer}>
           {!isSubmitted ? (
             <>
-              <Text style={styles.title}>Reset Password</Text>
-              <Text style={styles.subtitle}>
-                Enter your email address, and we'll send you instructions to reset your password.
+              <Text style={styles.title}>
+                {lang === 'fr'
+                  ? 'Réinitialiser le mot de passe'
+                  : lang === 'ara'
+                  ? 'إعادة تعيين كلمة المرور'
+                  : 'Reset Password'}
               </Text>
-              
+              <Text style={styles.subtitle}>
+                {lang === 'fr'
+                  ? 'Saisissez votre adresse e-mail, nous vous enverrons les instructions pour réinitialiser votre mot de passe.'
+                  : lang === 'ara'
+                  ? 'أدخل عنوان بريدك الإلكتروني وسنرسل لك تعليمات لإعادة تعيين كلمة المرور الخاصة بك.'
+                  : "Enter your email address, and we'll send you instructions to reset your password."}
+              </Text>
+
               {error && (
                 <View style={styles.errorContainer}>
                   <Text style={styles.errorText}>{error}</Text>
@@ -68,7 +87,13 @@ export default function ForgotPasswordScreen() {
                 <Mail size={20} color="#6B7280" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Email"
+                  placeholder={
+                    lang === 'fr'
+                      ? 'Email'
+                      : lang === 'ara'
+                      ? 'البريد الإلكتروني'
+                      : 'Email'
+                  }
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
@@ -76,15 +101,21 @@ export default function ForgotPasswordScreen() {
                 />
               </View>
 
-              <TouchableOpacity 
-                style={styles.submitButton} 
+              <TouchableOpacity
+                style={styles.submitButton}
                 onPress={handleSubmit}
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.submitButtonText}>Send Instructions</Text>
+                  <Text style={styles.submitButtonText}>
+                    {lang === 'fr'
+                      ? 'Envoyer les instructions'
+                      : lang === 'ara'
+                      ? 'إرسال التعليمات'
+                      : 'Send Instructions'}
+                  </Text>
                 )}
               </TouchableOpacity>
             </>
@@ -92,15 +123,31 @@ export default function ForgotPasswordScreen() {
             <>
               <View style={styles.successContainer}>
                 <Mail size={48} color="#3B6FE0" />
-                <Text style={styles.successTitle}>Check Your Email</Text>
-                <Text style={styles.successMessage}>
-                  We've sent password reset instructions to {email}
+                <Text style={styles.successTitle}>
+                  {lang === 'fr'
+                    ? 'Vérifiez votre e-mail'
+                    : lang === 'ara'
+                    ? 'تحقق من بريدك الإلكتروني'
+                    : 'Check Your Email'}
                 </Text>
-                <TouchableOpacity 
-                  style={styles.backToLoginButton} 
+                <Text style={styles.successMessage}>
+                  {lang === 'fr'
+                    ? `Nous avons envoyé les instructions de réinitialisation du mot de passe à ${email}`
+                    : lang === 'ara'
+                    ? `لقد أرسلنا تعليمات إعادة تعيين كلمة المرور إلى ${email}`
+                    : `We've sent password reset instructions to ${email}`}
+                </Text>
+                <TouchableOpacity
+                  style={styles.backToLoginButton}
                   onPress={() => router.push('/(auth)')}
                 >
-                  <Text style={styles.backToLoginText}>Back to Login</Text>
+                  <Text style={styles.backToLoginText}>
+                    {lang === 'fr'
+                      ? 'Retour à la connexion'
+                      : lang === 'ara'
+                      ? 'العودة إلى تسجيل الدخول'
+                      : 'Back to Login'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </>

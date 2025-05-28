@@ -19,9 +19,22 @@
     "androidNavigationBar": {
       "visible": "leanback"
     },
-    "plugins": ["expo-router", "expo-font", "expo-web-browser"],
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-web-browser"
+    ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1e28a45d-46e5-45b4-9201-336d628c8ca4"
+      }
+    },
+    "android": {
+      "package": "com.bounaderrafik.smartauto"
     }
   }
 }

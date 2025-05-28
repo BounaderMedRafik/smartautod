@@ -17,8 +17,11 @@ import { useAuth } from '@/context/AuthContext';
 import * as SecureStore from 'expo-secure-store';
 import { checkForUserInDB } from '@/database/useCheckForUserInDB';
 import { signUpUser } from '@/database/signUpUser';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function SignupScreen() {
+  const { lang } = useLanguage();
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,17 +33,35 @@ export default function SignupScreen() {
 
   const handleSignup = async () => {
     if (!name || !email || !password || !confirmPassword) {
-      setError('Please fill in all fields');
+      setError(
+        lang === 'fr'
+          ? 'Veuillez remplir tous les champs'
+          : lang === 'ara'
+          ? 'يرجى ملء جميع الحقول'
+          : 'Please fill in all fields'
+      );
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(
+        lang === 'fr'
+          ? 'Les mots de passe ne correspondent pas'
+          : lang === 'ara'
+          ? 'كلمات المرور غير متطابقة'
+          : 'Passwords do not match'
+      );
       return;
     }
 
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError(
+        lang === 'fr'
+          ? 'Le mot de passe doit contenir au moins 8 caractères'
+          : lang === 'ara'
+          ? 'يجب أن تكون كلمة المرور 8 أحرف على الأقل'
+          : 'Password must be at least 8 characters'
+      );
       return;
     }
 
@@ -51,7 +72,18 @@ export default function SignupScreen() {
       const userExists = await checkForUserInDB(email);
 
       if (userExists) {
-        Alert.alert('User already exists', 'Try logging in instead.');
+        Alert.alert(
+          lang === 'fr'
+            ? "L'utilisateur existe déjà"
+            : lang === 'ara'
+            ? 'المستخدم موجود بالفعل'
+            : 'User already exists',
+          lang === 'fr'
+            ? 'Essayez de vous connecter.'
+            : lang === 'ara'
+            ? 'حاول تسجيل الدخول بدلاً من ذلك.'
+            : 'Try logging in instead.'
+        );
         return;
       }
 
@@ -59,15 +91,24 @@ export default function SignupScreen() {
 
       await signUpUser({ name, age, email, password });
 
-      Alert.alert('Signed up successfully', 'You can now log in.');
+      Alert.alert(
+        lang === 'fr'
+          ? 'Inscription réussie'
+          : lang === 'ara'
+          ? 'تم التسجيل بنجاح'
+          : 'Signed up successfully',
+        lang === 'fr'
+          ? 'Vous pouvez maintenant vous connecter.'
+          : lang === 'ara'
+          ? 'يمكنك الآن تسجيل الدخول.'
+          : 'You can now log in.'
+      );
 
-      // Optionally clear form
       setName('');
       setEmail('');
       setPassword('');
       setConfirmPassword('');
 
-      // Redirect to profile (or login screen if preferred)
       router.replace({
         //@ts-ignore
         pathname: 'profile',
@@ -75,7 +116,14 @@ export default function SignupScreen() {
         params: { user: { name, email, age } },
       });
     } catch (err: any) {
-      setError(err.message || 'Signup failed');
+      setError(
+        err.message ||
+          (lang === 'fr'
+            ? "L'inscription a échoué"
+            : lang === 'ara'
+            ? 'فشل التسجيل'
+            : 'Signup failed')
+      );
     } finally {
       setIsLoading(false);
     }
@@ -95,7 +143,13 @@ export default function SignupScreen() {
         </TouchableOpacity>
 
         <View style={styles.formContainer}>
-          <Text style={styles.title}>Create Account</Text>
+          <Text style={styles.title}>
+            {lang === 'fr'
+              ? 'Créer un compte'
+              : lang === 'ara'
+              ? 'إنشاء حساب'
+              : 'Create Account'}
+          </Text>
 
           {error && (
             <View style={styles.errorContainer}>
@@ -107,7 +161,13 @@ export default function SignupScreen() {
             <User size={20} color="#6B7280" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Full Name"
+              placeholder={
+                lang === 'fr'
+                  ? 'Nom complet'
+                  : lang === 'ara'
+                  ? 'الاسم الكامل'
+                  : 'Full Name'
+              }
               value={name}
               onChangeText={setName}
             />
@@ -117,7 +177,13 @@ export default function SignupScreen() {
             <Mail size={20} color="#6B7280" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Email"
+              placeholder={
+                lang === 'fr'
+                  ? 'Email'
+                  : lang === 'ara'
+                  ? 'البريد الإلكتروني'
+                  : 'Email'
+              }
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -129,7 +195,13 @@ export default function SignupScreen() {
             <Lock size={20} color="#6B7280" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Password"
+              placeholder={
+                lang === 'fr'
+                  ? 'Mot de passe'
+                  : lang === 'ara'
+                  ? 'كلمة المرور'
+                  : 'Password'
+              }
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -140,7 +212,13 @@ export default function SignupScreen() {
             <Lock size={20} color="#6B7280" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Confirm Password"
+              placeholder={
+                lang === 'fr'
+                  ? 'Confirmer le mot de passe'
+                  : lang === 'ara'
+                  ? 'تأكيد كلمة المرور'
+                  : 'Confirm Password'
+              }
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
@@ -155,14 +233,32 @@ export default function SignupScreen() {
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.signupButtonText}>Create Account</Text>
+              <Text style={styles.signupButtonText}>
+                {lang === 'fr'
+                  ? 'Créer un compte'
+                  : lang === 'ara'
+                  ? 'إنشاء حساب'
+                  : 'Create Account'}
+              </Text>
             )}
           </TouchableOpacity>
 
           <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>Already have an account? </Text>
+            <Text style={styles.loginText}>
+              {lang === 'fr'
+                ? 'Vous avez déjà un compte? '
+                : lang === 'ara'
+                ? 'هل لديك حساب بالفعل؟ '
+                : 'Already have an account? '}
+            </Text>
             <TouchableOpacity onPress={() => router.back()}>
-              <Text style={styles.loginLink}>Sign In</Text>
+              <Text style={styles.loginLink}>
+                {lang === 'fr'
+                  ? 'Se connecter'
+                  : lang === 'ara'
+                  ? 'تسجيل الدخول'
+                  : 'Sign In'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

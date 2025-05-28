@@ -21,10 +21,12 @@ import {
 import { MaintenanceRecord, Vehicle } from '@/types';
 import { MOCK_MAINTENANCE, MOCK_VEHICLES } from '@/assets/MOCKDATA';
 import { supabase } from '@/lib/supabase';
+import { useLanguage } from '@/context/LanguageContext';
 
 type Filter = 'all' | 'scheduled' | 'completed';
 
 export default function MaintenanceScreen() {
+  const { lang } = useLanguage(); // 👈 Get current language
   const [refreshing, setRefreshing] = useState(false);
   const [records, setRecords] = useState<MaintenanceRecord[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -32,7 +34,6 @@ export default function MaintenanceScreen() {
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
   const router = useRouter();
 
-  // Fetch all maintenance records from Supabase
   const fetchMaintenanceRecords = async () => {
     setRefreshing(true);
     try {
@@ -50,7 +51,6 @@ export default function MaintenanceScreen() {
     }
   };
 
-  // Fetch vehicles from Supabase
   const fetchVehicles = async () => {
     try {
       const { data, error } = await supabase.from('cars').select('*');
@@ -81,14 +81,12 @@ export default function MaintenanceScreen() {
   const filteredRecords = React.useMemo(() => {
     let filtered = [...records];
 
-    // Apply vehicle filter if selected
     if (selectedVehicle) {
       filtered = filtered.filter(
         (record) => record.vehicleId === selectedVehicle
       );
     }
 
-    // Apply status filter
     if (filter === 'scheduled') {
       filtered = filtered.filter(
         (record) => record.isScheduled && !record.isDone
@@ -102,6 +100,7 @@ export default function MaintenanceScreen() {
 
   const renderMaintenanceItem = ({ item }: { item: MaintenanceRecord }) => {
     const vehicle = vehicles.find((v) => v.id === item.vehicleId);
+
     return (
       <TouchableOpacity
         style={styles.recordCard}
@@ -116,7 +115,11 @@ export default function MaintenanceScreen() {
             <Text style={styles.vehicleName}>
               {vehicle
                 ? `${vehicle.year} ${vehicle.make} ${vehicle.model}`
-                : 'Unknown Vehicle'}
+                : lang === 'eng'
+                ? 'Unknown Vehicle'
+                : lang === 'fr'
+                ? 'Véhicule inconnu'
+                : 'مركبة غير معروفة'}
             </Text>
           </View>
           <ChevronRight size={20} color="#9CA3AF" />
@@ -131,24 +134,32 @@ export default function MaintenanceScreen() {
           <View style={styles.detailItem}>
             <Car size={16} color="#6B7280" />
             <Text style={styles.detailText}>
-              {item.mileage?.toLocaleString() || 'N/A'} mi
+              {item.mileage?.toLocaleString() || 'N/A'} klm
             </Text>
           </View>
           {item.cost && (
             <View style={styles.detailItem}>
               <DollarSign size={16} color="#6B7280" />
-              <Text style={styles.detailText}>${item.cost}</Text>
+              <Text style={styles.detailText}>DZD • {item.cost}</Text>
             </View>
           )}
         </View>
         {item.isScheduled && !item.isDone && (
           <View style={styles.scheduledBadge}>
-            <Text style={styles.scheduledText}>Scheduled</Text>
+            <Text style={styles.scheduledText}>
+              {lang === 'eng' ? 'Scheduled' : lang === 'fr' ? 'Prévu' : 'مجدول'}
+            </Text>
           </View>
         )}
         {item.isDone && (
           <View style={styles.completedBadge}>
-            <Text style={styles.completedText}>Completed</Text>
+            <Text style={styles.completedText}>
+              {lang === 'eng'
+                ? 'Completed'
+                : lang === 'fr'
+                ? 'Terminé'
+                : 'مكتمل'}
+            </Text>
           </View>
         )}
       </TouchableOpacity>
@@ -176,9 +187,14 @@ export default function MaintenanceScreen() {
                 filter === 'all' && styles.filterTextActive,
               ]}
             >
-              All Records
+              {lang === 'eng'
+                ? 'All Records'
+                : lang === 'fr'
+                ? 'Tous les enregistrements'
+                : 'جميع السجلات'}
             </Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={[
               styles.filterButton,
@@ -192,9 +208,10 @@ export default function MaintenanceScreen() {
                 filter === 'scheduled' && styles.filterTextActive,
               ]}
             >
-              Scheduled
+              {lang === 'eng' ? 'Scheduled' : lang === 'fr' ? 'Prévu' : 'مجدول'}
             </Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={[
               styles.filterButton,
@@ -208,7 +225,11 @@ export default function MaintenanceScreen() {
                 filter === 'completed' && styles.filterTextActive,
               ]}
             >
-              Completed
+              {lang === 'eng'
+                ? 'Completed'
+                : lang === 'fr'
+                ? 'Terminé'
+                : 'مكتمل'}
             </Text>
           </TouchableOpacity>
 
@@ -248,17 +269,37 @@ export default function MaintenanceScreen() {
       {filteredRecords.length === 0 ? (
         <View style={styles.emptyContainer}>
           <FilterX size={48} color="#9CA3AF" />
-          <Text style={styles.emptyTitle}>No Records Found</Text>
+          <Text style={styles.emptyTitle}>
+            {lang === 'eng'
+              ? 'No Records Found'
+              : lang === 'fr'
+              ? 'Aucun enregistrement trouvé'
+              : 'لم يتم العثور على سجلات'}
+          </Text>
           <Text style={styles.emptyText}>
             {selectedVehicle
-              ? 'Try selecting a different vehicle or changing your filters'
-              : 'Add your first maintenance record to get started'}
+              ? lang === 'eng'
+                ? 'Try selecting a different vehicle or changing your filters'
+                : lang === 'fr'
+                ? 'Essayez de sélectionner un autre véhicule ou de modifier vos filtres'
+                : 'حاول تحديد مركبة أخرى أو تغيير عوامل التصفية'
+              : lang === 'eng'
+              ? 'Add your first maintenance record to get started'
+              : lang === 'fr'
+              ? 'Ajoutez votre premier enregistrement de maintenance pour commencer'
+              : 'أضف أول سجل صيانة للبدء'}
           </Text>
           <TouchableOpacity
             style={styles.emptyButton}
             onPress={handleAddMaintenance}
           >
-            <Text style={styles.emptyButtonText}>Add Maintenance Record</Text>
+            <Text style={styles.emptyButtonText}>
+              {lang === 'eng'
+                ? 'Add Maintenance Record'
+                : lang === 'fr'
+                ? 'Ajouter un enregistrement'
+                : 'إضافة سجل صيانة'}
+            </Text>
           </TouchableOpacity>
         </View>
       ) : (

@@ -1,7 +1,7 @@
-import { MOCK_REMINDERS, MOCK_VEHICLES } from '@/assets/MOCKDATA';
+import { useLanguage } from '@/context/LanguageContext';
 import { useUserReminders } from '@/database/useUserReminders';
 import { supabase } from '@/lib/supabase';
-import { Reminder, Vehicle } from '@/types';
+import { Reminder } from '@/types';
 import { useRouter } from 'expo-router';
 import {
   AlertCircle,
@@ -12,7 +12,7 @@ import {
   PlusCircle,
   ShieldCheck,
 } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -26,70 +26,71 @@ import {
 
 export default function RemindersScreen() {
   const router = useRouter();
+  const { lang } = useLanguage();
   const [showCompleted, setShowCompleted] = useState(false);
   const { reminders, vehicles, isLoading, error, refresh } = useUserReminders();
   const [refreshing, setRefreshing] = useState(false);
 
-  const onRefresh = React.useCallback(async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await refresh();
     setRefreshing(false);
   }, [refresh]);
 
-  const handleAddReminder = () => {
-    router.push('/reminder/add');
-  };
+  const handleAddReminder = () => router.push('/reminder/add');
 
-  const handleReminderPress = (reminderId: string) => {
-    router.push(`/reminder/${reminderId}`);
-  };
+  const handleReminderPress = (id: string) => router.push(`/reminder/${id}`);
 
-  const toggleReminderComplete = async (reminderId: string) => {
-    try {
-      const reminder = reminders.find((r: Reminder) => r.id === reminderId);
-      if (!reminder) return;
-
-      const { error } = await supabase
-        .from('reminders')
-        .update({ isComplete: !reminder.isComplete })
-        .eq('id', reminderId);
-
-      if (!error) {
-        await refresh();
-      }
-    } catch (err) {
-      console.error('Failed to update reminder:', err);
-    }
+  const toggleReminderComplete = async (id: string) => {
+    const reminder = reminders.find((r) => r.id === id);
+    if (!reminder) return;
+    const { error } = await supabase
+      .from('reminders')
+      .update({ isComplete: !reminder.isComplete })
+      .eq('id', id);
+    if (!error) await refresh();
   };
 
   const getDaysUntilDue = (dueDate: string) => {
-    const today = new Date();
-    const due = new Date(dueDate);
-    const diffTime = due.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    const diff = new Date(dueDate).getTime() - Date.now();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
   };
 
-  const getStatusColor = (daysUntil: number, isComplete: boolean) => {
-    if (isComplete) return '#10B981';
-    if (daysUntil < 0) return '#EF4444';
-    if (daysUntil < 7) return '#F59E0B';
-    return '#6B7280';
-  };
+  const getStatusColor = (days: number, done: boolean) =>
+    done ? '#10B981' : days < 0 ? '#EF4444' : days < 7 ? '#F59E0B' : '#6B7280';
 
-  const getStatusText = (daysUntil: number, isComplete: boolean) => {
-    if (isComplete) return 'Completed';
-    if (daysUntil < 0) return 'Overdue';
-    if (daysUntil === 0) return 'Due today';
-    if (daysUntil === 1) return 'Due tomorrow';
-    return `Due in ${daysUntil} days`;
-  };
+  const getStatusText = (days: number, done: boolean) =>
+    done
+      ? lang === 'fr'
+        ? 'Terminé'
+        : lang === 'ara'
+        ? 'مكتمل'
+        : 'Completed'
+      : days < 0
+      ? lang === 'fr'
+        ? 'En retard'
+        : lang === 'ara'
+        ? 'متأخر'
+        : 'Overdue'
+      : days === 0
+      ? lang === 'fr'
+        ? "À échéance aujourd'hui"
+        : lang === 'ara'
+        ? 'مستحق اليوم'
+        : 'Due today'
+      : days === 1
+      ? lang === 'fr'
+        ? 'À échéance demain'
+        : lang === 'ara'
+        ? 'مستحق غداً'
+        : 'Due tomorrow'
+      : lang === 'fr'
+      ? `À échéance dans ${days} jours`
+      : lang === 'ara'
+      ? `مستحق خلال ${days} يوم`
+      : `Due in ${days} days`;
 
-  const getIconForType = (
-    type: string,
-    size: number = 20,
-    color: string = '#3B6FE0'
-  ) => {
+  const getIconForType = (type: string, size = 20, color = '#3B6FE0') => {
     switch (type) {
       case 'maintenance':
         return <Leaf size={size} color={color} />;
@@ -102,25 +103,20 @@ export default function RemindersScreen() {
     }
   };
 
-  const filteredReminders = React.useMemo(() => {
-    let filtered = [...reminders];
-
-    if (!showCompleted) {
-      filtered = filtered.filter((reminder) => !reminder.isComplete);
-    }
-
-    return filtered.sort((a, b) => {
-      if (a.isComplete && !b.isComplete) return 1;
-      if (!a.isComplete && b.isComplete) return -1;
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-    });
+  const filteredReminders = useMemo(() => {
+    return reminders
+      .filter((r) => (showCompleted ? true : !r.isComplete))
+      .sort((a, b) => {
+        if (a.isComplete !== b.isComplete) return a.isComplete ? 1 : -1;
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      });
   }, [reminders, showCompleted]);
 
   const renderReminderItem = ({ item }: { item: Reminder }) => {
-    const vehicle = vehicles.find((v: Vehicle) => v.id === item.vehicleId);
-    const daysUntil = getDaysUntilDue(item.dueDate);
-    const statusColor = getStatusColor(daysUntil, item.isComplete);
-    const statusText = getStatusText(daysUntil, item.isComplete);
+    const vehicle = vehicles.find((v) => v.id === item.vehicleId);
+    const days = getDaysUntilDue(item.dueDate);
+    const color = getStatusColor(days, item.isComplete);
+    const text = getStatusText(days, item.isComplete);
 
     return (
       <TouchableOpacity
@@ -152,6 +148,10 @@ export default function RemindersScreen() {
             <Text style={styles.vehicleName}>
               {vehicle
                 ? `${vehicle.year} ${vehicle.make} ${vehicle.model}`
+                : lang === 'fr'
+                ? 'Véhicule inconnu'
+                : lang === 'ara'
+                ? 'مركبة غير معروفة'
                 : 'Unknown Vehicle'}
             </Text>
           </View>
@@ -160,14 +160,9 @@ export default function RemindersScreen() {
               e.stopPropagation();
               toggleReminderComplete(item.id);
             }}
-            style={[
-              styles.statusBadge,
-              { backgroundColor: statusColor + '20' },
-            ]}
+            style={[styles.statusBadge, { backgroundColor: color + '20' }]}
           >
-            <Text style={[styles.statusText, { color: statusColor }]}>
-              {statusText}
-            </Text>
+            <Text style={[styles.statusText, { color }]}>{text}</Text>
           </TouchableOpacity>
         </View>
 
@@ -181,7 +176,8 @@ export default function RemindersScreen() {
           {item.dueMileage && (
             <View style={styles.detailItem}>
               <Text style={styles.detailText}>
-                {item.dueMileage.toLocaleString()} miles
+                {item.dueMileage.toLocaleString()}{' '}
+                {lang === 'fr' ? 'miles' : lang === 'ara' ? 'ميل' : 'miles'}
               </Text>
             </View>
           )}
@@ -207,7 +203,13 @@ export default function RemindersScreen() {
       <View style={styles.container}>
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={refresh}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+          <Text style={styles.retryButtonText}>
+            {lang === 'fr'
+              ? 'Réessayer'
+              : lang === 'ara'
+              ? 'إعادة المحاولة'
+              : 'Retry'}
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -217,9 +219,21 @@ export default function RemindersScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTitleSection}>
-          <Text style={styles.headerTitle}>Service Reminders</Text>
+          <Text style={styles.headerTitle}>
+            {lang === 'fr'
+              ? 'Rappels de service'
+              : lang === 'ara'
+              ? 'تذكيرات الصيانة'
+              : 'Service Reminders'}
+          </Text>
           <View style={styles.completedToggle}>
-            <Text style={styles.toggleLabel}>Show completed</Text>
+            <Text style={styles.toggleLabel}>
+              {lang === 'fr'
+                ? 'Afficher terminés'
+                : lang === 'ara'
+                ? 'إظهار المكتملة'
+                : 'Show completed'}
+            </Text>
             <Switch
               value={showCompleted}
               onValueChange={setShowCompleted}
@@ -236,17 +250,37 @@ export default function RemindersScreen() {
       {filteredReminders.length === 0 ? (
         <View style={styles.emptyContainer}>
           <BellOff size={48} color="#9CA3AF" />
-          <Text style={styles.emptyTitle}>No Reminders</Text>
+          <Text style={styles.emptyTitle}>
+            {lang === 'fr'
+              ? 'Aucun rappel'
+              : lang === 'ara'
+              ? 'لا توجد تذكيرات'
+              : 'No Reminders'}
+          </Text>
           <Text style={styles.emptyText}>
             {!showCompleted
-              ? "You don't have any upcoming reminders"
+              ? lang === 'fr'
+                ? "Vous n'avez aucun rappel à venir"
+                : lang === 'ara'
+                ? 'ليس لديك تذكيرات قادمة'
+                : "You don't have any upcoming reminders"
+              : lang === 'fr'
+              ? "Vous n'avez aucun rappel"
+              : lang === 'ara'
+              ? 'ليس لديك أي تذكيرات'
               : "You don't have any reminders"}
           </Text>
           <TouchableOpacity
             style={styles.emptyButton}
             onPress={handleAddReminder}
           >
-            <Text style={styles.emptyButtonText}>Add Reminder</Text>
+            <Text style={styles.emptyButtonText}>
+              {lang === 'fr'
+                ? 'Ajouter un rappel'
+                : lang === 'ara'
+                ? 'أضف تذكير'
+                : 'Add Reminder'}
+            </Text>
           </TouchableOpacity>
         </View>
       ) : (
