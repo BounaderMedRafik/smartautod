@@ -1,24 +1,43 @@
-import React, { useState } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
+import { loginUser } from '@/database/useLoginUser';
+import { Link, useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store'; // optional: for storing user data securely
+import { Car, Lock, Mail } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Link, useRouter } from 'expo-router';
-import { Car, Lock, Mail } from 'lucide-react-native';
-import { useAuth } from '@/context/AuthContext';
-import { loginUser } from '@/database/useLoginUser';
-import * as SecureStore from 'expo-secure-store'; // optional: for storing user data securely
-import { useLanguage } from '@/context/LanguageContext';
 export default function LoginScreen() {
   const { lang } = useLanguage();
+  useEffect(() => {
+    const checkForUserSession = async () => {
+      try {
+        const userData = await SecureStore.getItemAsync('user');
+        if (userData) {
+          const user = JSON.parse(userData);
+
+          router.replace({
+            //@ts-ignore
+            pathname: '(app)', // Or '(app)' if you want to go there
+            //@ts-ignore
+            params: { user },
+          });
+        }
+      } catch (err) {
+        console.error('Failed to restore session', err);
+      }
+    };
+
+    checkForUserSession();
+  }, []);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

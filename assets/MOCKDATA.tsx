@@ -42,6 +42,7 @@ export const MOCK_MAINTENANCE: MaintenanceRecord[] = [
     location: 'QuickLube Service',
     isScheduled: false,
     isDone: true,
+    userid: undefined,
   },
   {
     id: '2',
@@ -54,6 +55,7 @@ export const MOCK_MAINTENANCE: MaintenanceRecord[] = [
     location: 'City Auto Repair',
     isScheduled: false,
     isDone: true,
+    userid: undefined,
   },
   {
     id: '3',
@@ -66,6 +68,7 @@ export const MOCK_MAINTENANCE: MaintenanceRecord[] = [
     location: 'Discount Tire',
     isScheduled: false,
     isDone: true,
+    userid: undefined,
   },
   {
     id: '4',
@@ -77,6 +80,7 @@ export const MOCK_MAINTENANCE: MaintenanceRecord[] = [
     cost: 250.0,
     isScheduled: true,
     isDone: false,
+    userid: undefined,
   },
 ];
 
@@ -92,6 +96,7 @@ export const MOCK_REMINDERS: Reminder[] = [
     isComplete: false,
     recurringInterval: 90, // 90 days
     recurringMileage: 5000,
+    userid: undefined,
   },
   {
     id: '2',
@@ -104,6 +109,7 @@ export const MOCK_REMINDERS: Reminder[] = [
     isComplete: false,
     recurringInterval: 180, // 180 days
     recurringMileage: 7500,
+    userid: undefined,
   },
   {
     id: '3',
@@ -113,7 +119,8 @@ export const MOCK_REMINDERS: Reminder[] = [
     dueDate: '2023-12-01',
     type: 'insurance',
     isComplete: false,
-    recurringInterval: 365, // 365 days
+    recurringInterval: 365,
+    userid: undefined,
   },
   {
     id: '4',
@@ -123,7 +130,8 @@ export const MOCK_REMINDERS: Reminder[] = [
     dueDate: '2024-02-15',
     type: 'tax',
     isComplete: false,
-    recurringInterval: 365, // 365 days
+    recurringInterval: 365,
+    userid: undefined,
   },
 ];
 
