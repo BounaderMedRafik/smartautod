@@ -85,10 +85,10 @@ export default function RemindersScreen() {
         ? 'مستحق غداً'
         : 'Due tomorrow'
       : lang === 'fr'
-      ? `À échéance dans ${days} jours`
+      ? `À échéance dans ${days - 1} jours`
       : lang === 'ara'
-      ? `مستحق خلال ${days} يوم`
-      : `Due in ${days} days`;
+      ? `مستحق خلال ${days - 1} يوم`
+      : `Due in ${days - 1} days`;
 
   const getIconForType = (type: string, size = 20, color = '#3B6FE0') => {
     switch (type) {

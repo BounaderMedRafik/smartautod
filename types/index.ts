@@ -77,3 +77,11 @@ export interface VehicleCardProps {
   userId: string | undefined;
   onPress: () => void;
 }
+
+export interface Mechanics {
+  name: string;
+  description: string;
+  phonenum: string;
+  location: string;
+  image: string;
+}

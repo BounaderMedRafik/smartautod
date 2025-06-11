@@ -1,6 +1,6 @@
 import { useLanguage } from '@/context/LanguageContext';
 import { Tabs } from 'expo-router';
-import { Bell, Car, User, Wrench } from 'lucide-react-native';
+import { Bell, Car, Hammer, User, Wrench } from 'lucide-react-native';
 import { Platform } from 'react-native';
 
 export default function AppLayout() {
@@ -87,6 +87,24 @@ export default function AppLayout() {
               : lang === 'fr'
               ? 'Rappels de service'
               : 'تذكيرات الخدمة',
+        }}
+      />
+      <Tabs.Screen
+        name="mechanics"
+        options={{
+          title:
+            lang === 'eng'
+              ? 'Mechanics'
+              : lang === 'fr'
+              ? 'Mécaniciens'
+              : 'الميكانيكيون',
+          tabBarIcon: ({ color, size }) => <Hammer size={size} color={color} />,
+          headerTitle:
+            lang === 'eng'
+              ? 'Nearby Mechanics'
+              : lang === 'fr'
+              ? 'Mécaniciens Proches'
+              : 'الميكانيكيون القريبون',
         }}
       />
       <Tabs.Screen
