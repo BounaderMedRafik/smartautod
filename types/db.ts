@@ -1,4 +1,4 @@
-import { Mechanics } from '.';
+import { Mechanics, ShopsProps } from '.';
 
 export type supaUser = {
   uuid: string;
@@ -65,5 +65,72 @@ export const mockMechanics: Mechanics[] = [
     location: 'Chefia, El Tarf',
     image:
       'https://thumbs.dreamstime.com/b/arabic-mechanic-gives-key-car-portrait-wearing-uniform-giving-smiling-camera-isolated-white-background-71834840.jpg',
+  },
+];
+
+export const carShops: ShopsProps[] = [
+  {
+    name: 'Auto Pièces El Kala',
+    description:
+      "Vente de pièces détachées neuves et d'occasion pour toutes marques.",
+    phonenum: '0657 42 31 10',
+    location: 'El Kala, El Tarf',
+    image:
+      'https://cdn.prod.website-files.com/6769617aecf082b10bb149ff/67c1ac112565c597dd338fe1_alex-suprun-AHnhdjyTNGM-unsplash-1-1024x683.jpg',
+    openTime: '08:00',
+    closeTime: '17:00',
+  },
+  {
+    name: 'Garage Annaba Pièces',
+    description:
+      'Spécialiste des pièces Renault, Peugeot, et Hyundai à bon prix.',
+    phonenum: '0771 83 24 66',
+    location: 'Centre-ville, Annaba',
+    image:
+      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRV5HmxfZCnHvwnKaOVmd77oQ5Cg027lx-dVg&s',
+    openTime: '08:30',
+    closeTime: '18:00',
+  },
+  {
+    name: 'Sidi Amar Auto Center',
+    description: 'Pièces auto, accessoires, et huiles moteur. Service rapide.',
+    phonenum: '0550 22 90 43',
+    location: 'Sidi Amar, Annaba',
+    image:
+      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJiWg0MgfRXMYBsa8gnphMTYyCnG8VOQLWHw&s',
+    openTime: '09:00',
+    closeTime: '17:30',
+  },
+  {
+    name: 'AutoDz Pièces & Accessoires',
+    description:
+      'Grossiste en pièces détachées pour voitures européennes et asiatiques.',
+    phonenum: '0661 99 32 77',
+    location: 'Drean, El Tarf',
+    image: 'https://cdn.autobip.com/600/photos/articles/1309/Photo1.webp',
+    openTime: '08:00',
+    closeTime: '16:30',
+  },
+  {
+    name: 'Pièces Auto Ain El Assel',
+    description:
+      'Vente locale de pièces de rechange pour véhicules utilitaires.',
+    phonenum: '0695 43 87 90',
+    location: 'Ain El Assel, El Tarf',
+    image:
+      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTav4nRxAj78uBqT4PgSfNEDlsn6rDQ8fPceA&s',
+    openTime: '08:00',
+    closeTime: '17:00',
+  },
+  {
+    name: 'Garage Bounaama',
+    description:
+      'Atelier mécanique avec vente de pièces et services d’entretien.',
+    phonenum: '0560 88 12 34',
+    location: 'Berrahal, Annaba',
+    image:
+      'https://cdn7.ouedkniss.com/400/medias/announcements/images/BL7Bzk/CTsZ0OuZW4UziwpuIuZ0QsznPoYKfTVklUV8h66y.jpg',
+    openTime: '08:00',
+    closeTime: '18:00',
   },
 ];

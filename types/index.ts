@@ -85,3 +85,13 @@ export interface Mechanics {
   location: string;
   image: string;
 }
+
+export interface ShopsProps {
+  name: string;
+  description: string;
+  phonenum: string;
+  location: string;
+  image: string;
+  openTime: string;
+  closeTime: string;
+}

@@ -11,44 +11,94 @@ import {
 } from 'react-native';
 import { Hammer } from 'lucide-react-native';
 import { useLanguage } from '@/context/LanguageContext';
-import { Mechanics } from '@/types';
-import { mockMechanics } from '@/types/db';
+import { Mechanics, ShopsProps } from '@/types';
+import { carShops, mockMechanics } from '@/types/db';
 
 export default function MechanicsScreen() {
   const { lang } = useLanguage();
   const [mechanics, setMechanics] = useState<Mechanics[]>([]);
+  const [shops, setShops] = useState<ShopsProps[]>(carShops);
   const [selectedMechanic, setSelectedMechanic] = useState<Mechanics | null>(
     null
   );
+  const [selectedShop, setSelectedShop] = useState<ShopsProps | null>(null);
   const [message, setMessage] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [tab, setTab] = useState<'mechanics' | 'shops'>('mechanics');
 
   useEffect(() => {
     setMechanics(mockMechanics);
+    setShops(carShops);
   }, []);
 
-  const openMessageModal = (mechanic: Mechanics) => {
-    setSelectedMechanic(mechanic);
+  const openContactModal = (
+    type: 'mechanic' | 'shop',
+    item: Mechanics | ShopsProps
+  ) => {
     setMessage('');
     setModalVisible(true);
+    if (type === 'mechanic') {
+      setSelectedMechanic(item as Mechanics);
+      setSelectedShop(null);
+    } else {
+      setSelectedShop(item as ShopsProps);
+      setSelectedMechanic(null);
+    }
   };
 
   const handleSendMessage = () => {
     setModalVisible(false);
     setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000); // Hide after 3 seconds
+    setTimeout(() => setShowSuccess(false), 3000);
+  };
+
+  const getModalTitle = () => {
+    const name = selectedMechanic?.name || selectedShop?.name || '';
+    return lang === 'eng'
+      ? `Message to ${name}`
+      : lang === 'fr'
+      ? `Message à ${name}`
+      : `رسالة إلى ${name}`;
   };
 
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.sectionTitle}>
         {lang === 'eng'
-          ? 'Nearby Mechanics'
+          ? 'Nearby Services'
           : lang === 'fr'
-          ? 'Mécaniciens proches'
-          : 'الميكانيكيون القريبون'}
+          ? 'Services Proches'
+          : 'الخدمات القريبة'}
       </Text>
+
+      {/* Tabs */}
+      <View style={styles.tabs}>
+        <TouchableOpacity
+          style={[styles.tabButton, tab === 'mechanics' && styles.activeTab]}
+          onPress={() => setTab('mechanics')}
+        >
+          <Text style={styles.tabText}>
+            {lang === 'eng'
+              ? 'Mechanics'
+              : lang === 'fr'
+              ? 'Mécaniciens'
+              : 'الميكانيكيون'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabButton, tab === 'shops' && styles.activeTab]}
+          onPress={() => setTab('shops')}
+        >
+          <Text style={styles.tabText}>
+            {lang === 'eng'
+              ? 'Shops'
+              : lang === 'fr'
+              ? 'Boutiques'
+              : 'محلات قطع الغيار'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       {showSuccess && (
         <View style={styles.successBanner}>
@@ -62,31 +112,66 @@ export default function MechanicsScreen() {
         </View>
       )}
 
-      {mechanics.map((mech, index) => (
-        <View key={index} style={styles.card}>
-          <Image source={{ uri: mech.image }} style={styles.image} />
-          <View style={styles.info}>
-            <Text style={styles.name}>{mech.name}</Text>
-            <Text style={styles.description}>{mech.description}</Text>
-            <Text style={styles.meta}>{mech.phonenum}</Text>
-            <Text style={styles.meta}>{mech.location}</Text>
-
-            <TouchableOpacity
-              style={styles.messageButton}
-              onPress={() => openMessageModal(mech)}
-            >
-              <Text style={styles.messageText}>
-                {lang === 'eng'
-                  ? 'Send Message'
-                  : lang === 'fr'
-                  ? 'Envoyer un message'
-                  : 'إرسال رسالة'}
-              </Text>
-            </TouchableOpacity>
+      {/* Mechanics */}
+      {tab === 'mechanics' &&
+        mechanics.map((mech, index) => (
+          <View key={index} style={styles.card}>
+            <Image source={{ uri: mech.image }} style={styles.image} />
+            <View style={styles.info}>
+              <Text style={styles.name}>{mech.name}</Text>
+              <Text style={styles.description}>{mech.description}</Text>
+              <Text style={styles.meta}>{mech.phonenum}</Text>
+              <Text style={styles.meta}>{mech.location}</Text>
+              <TouchableOpacity
+                style={styles.messageButton}
+                onPress={() => openContactModal('mechanic', mech)}
+              >
+                <Text style={styles.messageText}>
+                  {lang === 'eng'
+                    ? 'Send Message'
+                    : lang === 'fr'
+                    ? 'Envoyer un message'
+                    : 'إرسال رسالة'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      ))}
+        ))}
 
+      {/* Shops */}
+      {tab === 'shops' &&
+        shops.map((shop, index) => (
+          <View key={index} style={styles.card}>
+            <Image source={{ uri: shop.image }} style={styles.image} />
+            <View style={styles.info}>
+              <Text style={styles.name}>{shop.name}</Text>
+              <Text style={styles.description}>{shop.description}</Text>
+              <Text style={styles.meta}>{shop.phonenum}</Text>
+              <Text style={styles.meta}>{shop.location}</Text>
+              <Text style={styles.meta}>
+                {lang === 'eng'
+                  ? `Open: ${shop.openTime} - ${shop.closeTime}`
+                  : lang === 'fr'
+                  ? `Ouvert : ${shop.openTime} - ${shop.closeTime}`
+                  : `مفتوح: ${shop.openTime} - ${shop.closeTime}`}
+              </Text>
+              <TouchableOpacity
+                style={styles.messageButton}
+                onPress={() => openContactModal('shop', shop)}
+              >
+                <Text style={styles.messageText}>
+                  {lang === 'eng'
+                    ? 'Contact Shop'
+                    : lang === 'fr'
+                    ? 'Contacter la boutique'
+                    : 'اتصل بالمحل'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))}
+
+      {/* Message Modal (Mechanic or Shop) */}
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <TouchableOpacity
@@ -96,13 +181,7 @@ export default function MechanicsScreen() {
             <Text style={styles.closeText}>✕</Text>
           </TouchableOpacity>
           <View style={styles.modalView}>
-            <Text style={styles.modalTitle}>
-              {lang === 'eng'
-                ? `Message to ${selectedMechanic?.name}`
-                : lang === 'fr'
-                ? `Message à ${selectedMechanic?.name}`
-                : `رسالة إلى ${selectedMechanic?.name}`}
-            </Text>
+            <Text style={styles.modalTitle}>{getModalTitle()}</Text>
             <TextInput
               style={styles.input}
               placeholder={
@@ -142,25 +221,31 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     marginBottom: 16,
   },
+  tabs: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 10,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 8,
+    marginHorizontal: 4,
+    alignItems: 'center',
+  },
+  activeTab: {
+    backgroundColor: '#3B82F6',
+  },
+  tabText: {
+    color: '#111827',
+    fontFamily: 'Inter-Medium',
+  },
   successBanner: {
     backgroundColor: '#D1FAE5',
     padding: 10,
     borderRadius: 8,
     marginBottom: 12,
   },
-  closeButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    zIndex: 1,
-    padding: 6,
-  },
-
-  closeText: {
-    fontSize: 18,
-    color: 'white',
-  },
-
   successText: {
     color: '#065F46',
     fontFamily: 'Inter-Medium',
@@ -175,10 +260,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
   },
   image: {
     width: 80,
@@ -258,5 +339,23 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontFamily: 'Inter-Medium',
     fontSize: 16,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 30,
+    right: 20,
+    zIndex: 10,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 20,
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  closeText: {
+    fontSize: 18,
+    color: '#374151',
+    fontFamily: 'Inter-Bold',
   },
 });
